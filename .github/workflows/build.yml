@@ -13,9 +13,9 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -32,24 +32,34 @@ jobs:
       - name: Compiler l'application
         run: npm run build
 
-      # Pull request : installateur construit pour vérification, rien n'est publié.
       - name: Créer l'installateur (.exe)
-        if: ${{ github.event_name == 'pull_request' }}
         run: npx electron-builder --win --publish never
 
       # main : publie (ou complète) la version vX.Y.Z définie dans package.json.
-      # Les utilisateurs reçoivent la mise à jour automatiquement.
+      # latest.yml et le .blockmap permettent la mise à jour automatique chez les utilisateurs.
       - name: Publier la version sur GitHub Releases
         if: ${{ github.event_name != 'pull_request' }}
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win --publish always
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          ls -la dist
+          FILES=(dist/*.exe dist/*.exe.blockmap dist/latest.yml)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${FILES[@]}" --clobber
+          else
+            gh release create "$TAG" "${FILES[@]}" --title "AI Studio $VERSION" --target "$GITHUB_SHA" \
+              --notes "Installateur Windows : télécharge AI-Studio-Setup-$VERSION.exe ci-dessous. Les versions déjà installées se mettent à jour automatiquement."
+          fi
 
       - name: Joindre l'installateur au build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: AI-Studio-Setup
           path: |
             dist/*.exe
+            dist/*.blockmap
             dist/latest.yml
           if-no-files-found: error
