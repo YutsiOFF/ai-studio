@@ -3,7 +3,6 @@ name: Build Windows
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -33,12 +32,15 @@ jobs:
       - name: Compiler l'application
         run: npm run build
 
+      # Pull request : installateur construit pour vérification, rien n'est publié.
       - name: Créer l'installateur (.exe)
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ github.event_name == 'pull_request' }}
         run: npx electron-builder --win --publish never
 
+      # main : publie (ou complète) la version vX.Y.Z définie dans package.json.
+      # Les utilisateurs reçoivent la mise à jour automatiquement.
       - name: Publier la version sur GitHub Releases
-        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ github.event_name != 'pull_request' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --win --publish always

@@ -41,7 +41,7 @@ npm run typecheck  # vérification des types
 npm run dist       # crée l'installateur Windows dans dist/
 ```
 
-Chaque `push` sur `main` construit l'installateur sur GitHub Actions (artefact « AI-Studio-Setup »). Un tag `vX.Y.Z` publie une version sur la page Releases, ce qui déclenche la mise à jour automatique chez les utilisateurs.
+Chaque `push` sur `main` construit l'installateur sur GitHub Actions et publie la version indiquée dans `package.json` sur la page Releases. Pour sortir une nouvelle version : augmenter `version` dans `package.json` puis pousser sur `main` ; les utilisateurs reçoivent la mise à jour automatiquement.
 
 ## Documentation
 
