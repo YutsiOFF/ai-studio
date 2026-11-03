@@ -6,6 +6,9 @@ Plateforme Windows tout-en-un pour utiliser des **IA gratuites**, en **local** (
 
 ## Installer
 
+Site : **https://yutsioff.github.io/ai-studio/**
+
+
 1. Ouvre la page [Releases](https://github.com/YutsiOFF/ai-studio/releases).
 2. Télécharge `AI-Studio-Setup-x.y.z.exe` et lance-le (aucun droit administrateur requis).
 3. Windows SmartScreen peut afficher « Windows a protégé votre ordinateur » car l'installateur n'est pas signé (une signature de code est payante). Clique sur **Informations complémentaires** puis **Exécuter quand même**.

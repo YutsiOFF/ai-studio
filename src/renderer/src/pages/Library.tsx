@@ -159,7 +159,7 @@ export function LibraryPage() {
                           {installedSet.has(m.id) && <Badge tone="local">Installé</Badge>}
                         </div>
                         <div className="mt-1.5 text-[12px] text-fg-muted">
-                          {formatMB(m.sizeMB)} · ~{speeds.data?.[m.id] ?? r.assessment.tokensPerSecond} mots/s{speeds.data?.[m.id] ? ' (mesuré)' : ' (estimé)'}
+                          {formatMB(m.sizeMB)} · ~{speeds.data?.[m.id] ?? r.assessment.tokensPerSecond} tokens/s{speeds.data?.[m.id] ? ' (mesuré)' : ' (estimé)'}
                         </div>
                       </>
                     ) : (
@@ -300,7 +300,7 @@ function LlmCard(props: {
         <Caps caps={m.capabilities} />
         {fitInfo.fit !== 'too-heavy' && (
           <span className="flex items-center gap-1 text-[11.5px] text-fg-subtle">
-            <Gauge className="size-3.5" /> ~{props.measured ?? fitInfo.tokensPerSecond} mots/s {props.measured ? 'mesuré' : 'estimé'}
+            <Gauge className="size-3.5" /> ~{props.measured ?? fitInfo.tokensPerSecond} tokens/s {props.measured ? 'mesuré' : 'estimé'}
           </span>
         )}
       </div>

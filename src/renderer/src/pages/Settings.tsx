@@ -262,6 +262,11 @@ function AboutTab() {
         <Row title="AI Studio" description="Plateforme d'IA gratuites, locales et Cloud. Licence MIT.">
           <span className="font-mono text-[12.5px] text-fg-muted">v{info?.version}</span>
         </Row>
+        <Row title="Site officiel" description="yutsioff.github.io/ai-studio">
+          <Button icon={ExternalLink} onClick={() => api.app.openExternal('https://yutsioff.github.io/ai-studio/')}>
+            Ouvrir
+          </Button>
+        </Row>
         <Row title="Code source" description="github.com/YutsiOFF/ai-studio">
           <Button icon={ExternalLink} onClick={() => api.app.openExternal('https://github.com/YutsiOFF/ai-studio')}>
             Ouvrir

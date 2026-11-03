@@ -1,6 +1,6 @@
 {
   "name": "ai-studio",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Plateforme tout-en-un d'IA gratuites, locales et Cloud.",
   "main": "./out/main/index.js",
   "scripts": {
@@ -57,5 +57,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/YutsiOFF/ai-studio.git"
-  }
+  },
+  "homepage": "https://yutsioff.github.io/ai-studio/"
 }

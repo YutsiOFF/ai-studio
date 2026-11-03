@@ -114,7 +114,7 @@ export function LocalModelsPage() {
                         {m.parameterSize && <span>{m.parameterSize}</span>}
                         {m.quantization && <span>{m.quantization}</span>}
                         {c && c !== 'error' && c.contextK && <span>Contexte {c.contextK}k</span>}
-                        {speeds.data?.[m.name] && <span>{speeds.data[m.name]} mots/s mesurés</span>}
+                        {speeds.data?.[m.name] && <span>{speeds.data[m.name]} tokens/s mesurés</span>}
                       </div>
                     </div>
                     <div className="flex gap-1">
