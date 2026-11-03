@@ -39,10 +39,10 @@ export function ProjectsPage() {
         }
       />
 
-      <Card className="mb-5 flex items-center gap-3 border-cloud/20 bg-cloud/[0.04] px-5 py-3.5">
-        <Badge tone="cloud">Étape M4</Badge>
+      <Card className="mb-5 flex items-center gap-3 border-accent/20 bg-accent/[0.04] px-5 py-3.5">
+        <Badge tone="accent">Agents</Badge>
         <p className="text-[13px] text-fg-muted">
-          L'exploration des fichiers, les conversations et le travail des agents dans le dossier arrivent avec l'Assistant IA.
+          Pour faire travailler une IA dans un projet : ouvre l'Assistant IA, choisis le projet, puis décris la tâche. Chaque modification te sera montrée avant d'être appliquée.
         </p>
       </Card>
 

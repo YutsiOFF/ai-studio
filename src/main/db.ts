@@ -29,7 +29,70 @@ const MIGRATIONS: string[] = [
      message TEXT NOT NULL,
      data TEXT
    );
-   CREATE INDEX activity_ts ON activity_log(ts);`
+   CREATE INDEX activity_ts ON activity_log(ts);`,
+  `CREATE TABLE conversations (
+     id TEXT PRIMARY KEY,
+     title TEXT NOT NULL,
+     project_id TEXT,
+     model_ref TEXT NOT NULL,
+     mode TEXT NOT NULL DEFAULT 'chat',
+     created_at TEXT NOT NULL,
+     updated_at TEXT NOT NULL
+   );
+   CREATE TABLE messages (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+     role TEXT NOT NULL,
+     content TEXT NOT NULL,
+     meta TEXT NOT NULL DEFAULT '{}',
+     created_at TEXT NOT NULL
+   );
+   CREATE INDEX messages_conv ON messages(conversation_id, id);
+   CREATE TABLE agent_events (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+     run_id TEXT NOT NULL,
+     ts TEXT NOT NULL,
+     type TEXT NOT NULL,
+     data TEXT NOT NULL
+   );
+   CREATE INDEX agent_events_conv ON agent_events(conversation_id, id);
+   CREATE TABLE file_changes (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     conversation_id TEXT NOT NULL,
+     run_id TEXT NOT NULL,
+     project_id TEXT NOT NULL,
+     path TEXT NOT NULL,
+     action TEXT NOT NULL,
+     before_content TEXT,
+     after_content TEXT,
+     status TEXT NOT NULL,
+     created_at TEXT NOT NULL
+   );
+   CREATE TABLE generations (
+     id TEXT PRIMARY KEY,
+     kind TEXT NOT NULL,
+     project_id TEXT,
+     engine TEXT NOT NULL,
+     location TEXT NOT NULL,
+     prompt TEXT NOT NULL DEFAULT '',
+     params TEXT NOT NULL DEFAULT '{}',
+     files TEXT NOT NULL DEFAULT '[]',
+     created_at TEXT NOT NULL
+   );
+   CREATE INDEX generations_kind ON generations(kind, created_at);
+   CREATE TABLE provider_keys (
+     provider_id TEXT PRIMARY KEY,
+     enc TEXT,
+     extra TEXT NOT NULL DEFAULT '{}',
+     enabled INTEGER NOT NULL DEFAULT 1
+   );
+   CREATE TABLE usage_daily (
+     provider_id TEXT NOT NULL,
+     day TEXT NOT NULL,
+     requests INTEGER NOT NULL DEFAULT 0,
+     PRIMARY KEY (provider_id, day)
+   );`
 ]
 
 export function openDatabase(file: string): Db {

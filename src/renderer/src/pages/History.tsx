@@ -1,11 +1,18 @@
-import { Activity, FolderKanban, Power, Settings } from 'lucide-react'
-import { Badge, Card, PageHeader, Skeleton } from '../components/ui'
+import { Activity, Bot, Box, Cloud, Cpu, FolderKanban, HardDrive, Image, Power, Settings } from 'lucide-react'
+import { Card, PageHeader, Skeleton } from '../components/ui'
 import { api, useAsync } from '../lib/hooks'
 
 const ICONS: Record<string, typeof Activity> = {
   project: FolderKanban,
   settings: Settings,
-  app: Power
+  app: Power,
+  model: HardDrive,
+  'image-model': HardDrive,
+  engine: Cpu,
+  agent: Bot,
+  cloud: Cloud,
+  image: Image,
+  mesh3d: Box
 }
 
 function dayLabel(iso: string): string {
@@ -30,8 +37,8 @@ export function HistoryPage() {
     <>
       <PageHeader
         title="Historique"
-        description="Journal local des actions effectuées dans AI Studio. Il restera sur ton PC et ne sera jamais envoyé."
-        actions={<Badge tone="warn">Conversations et générations : M2 – M6</Badge>}
+        description="Journal local de toutes les actions : projets, modèles, générations, modifications des agents. Il reste sur ton PC et n'est jamais envoyé. Les conversations sont dans l'Assistant, les images et modèles 3D dans leurs pages."
+
       />
       {loading && !data && <Skeleton className="h-64" />}
       <div className="space-y-6">

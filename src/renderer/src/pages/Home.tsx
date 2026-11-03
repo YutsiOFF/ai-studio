@@ -1,15 +1,15 @@
-import { ArrowRight, FolderPlus } from 'lucide-react'
+import { ArrowRight, Box, FolderPlus, Image, Library, MessagesSquare } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { HardwareCard } from '../components/HardwareCard'
 import { Badge, Button, Card, CardHeader, PageHeader } from '../components/ui'
 import { api, useAsync } from '../lib/hooks'
-import { NAV, type ModuleStatus } from '../nav'
 
-const STATUS: Record<ModuleStatus, { label: string; tone: 'accent' | 'warn' | 'neutral' }> = {
-  available: { label: 'Disponible', tone: 'accent' },
-  partial: { label: 'Partiel', tone: 'warn' },
-  planned: { label: 'À venir', tone: 'neutral' }
-}
+const QUICK = [
+  { path: '/library', icon: Library, title: 'Installer des IA locales', text: 'Le pack recommandé pour ton PC, en un clic.' },
+  { path: '/assistant', icon: MessagesSquare, title: 'Discuter ou lancer un agent', text: 'Local ou Cloud gratuit, sur tes projets.' },
+  { path: '/images', icon: Image, title: 'Générer des images', text: 'Z-Image, SDXL, SD 1.5 en local.' },
+  { path: '/3d', icon: Box, title: 'Créer un modèle 3D', text: 'Image → 3D, découpage en parties, export.' }
+]
 
 function greeting(): string {
   const h = new Date().getHours()
@@ -74,19 +74,18 @@ export function HomePage() {
           </Card>
 
           <Card>
-            <CardHeader title="État des modules" description="Ce qui fonctionne déjà, et ce qui arrive dans les prochaines mises à jour." />
-            <ul className="divide-y divide-line">
-              {NAV.filter((n) => n.path !== '/').map((n) => (
-                <li key={n.path} className="flex items-center gap-3 px-5 py-2.5">
-                  <n.icon className="size-4 text-fg-subtle" strokeWidth={1.75} />
-                  <span className="flex-1 text-[13px]">{n.label}</span>
-                  <span className="text-[11.5px] text-fg-subtle">{n.milestone}</span>
-                  <Badge tone={STATUS[n.status].tone} className="w-[78px] justify-center">
-                    {STATUS[n.status].label}
-                  </Badge>
-                </li>
+            <CardHeader title="Commencer" description="Tout fonctionne en local sans compte ; le Cloud gratuit est en option." />
+            <div className="grid grid-cols-2 gap-px bg-line">
+              {QUICK.map((q) => (
+                <button key={q.path} onClick={() => navigate(q.path)} className="group flex items-start gap-3 bg-surface px-5 py-4 text-left transition-colors hover:bg-surface-2">
+                  <q.icon className="mt-0.5 size-5 shrink-0 text-accent" strokeWidth={1.75} />
+                  <div>
+                    <div className="text-[13.5px] font-medium">{q.title}</div>
+                    <div className="mt-0.5 text-[12px] text-fg-muted">{q.text}</div>
+                  </div>
+                </button>
               ))}
-            </ul>
+            </div>
           </Card>
         </div>
       </div>

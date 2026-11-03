@@ -3,9 +3,12 @@ import { Download, ExternalLink, FolderOpen, RefreshCw, RotateCcw } from 'lucide
 import { useEffect, useState } from 'react'
 import type { Settings, UpdateStatus } from '@shared/types'
 import { HardwareCard } from '../components/HardwareCard'
+import { AiTab, SecurityTab } from './SettingsAi'
 import { Badge, Button, Card, CardHeader, Meter, PageHeader, Skeleton, Toggle, cn, formatMB } from '../components/ui'
 import { api, useAsync, usePolling } from '../lib/hooks'
 import { toast } from '../lib/toast'
+import { useTaskStore } from '../lib/tasks'
+import { TaskProgress } from '../components/Tasks'
 
 const TABS = [
   { id: 'general', label: 'Général' },
@@ -36,26 +39,8 @@ export function SettingsPage() {
       </div>
       {tab === 'general' && <GeneralTab />}
       {tab === 'resources' && <ResourcesTab />}
-      {tab === 'ai' && (
-        <PlannedTab
-          milestone="M2 · M3"
-          items={[
-            'Fournisseurs Cloud gratuits et gestion de leurs clés API (chiffrées par Windows).',
-            'Modèles locaux : aucune clé API, configuration automatique du moteur.',
-            'Modèle par défaut et routage automatique selon la tâche.'
-          ]}
-        />
-      )}
-      {tab === 'security' && (
-        <PlannedTab
-          milestone="M4"
-          items={[
-            'Permissions par projet et par type d’action (lecture, écriture, commandes).',
-            'Confirmations avant toute opération destructrice ou commande sensible.',
-            'Journal complet des opérations des agents.'
-          ]}
-        />
-      )}
+      {tab === 'ai' && <AiTab />}
+      {tab === 'security' && <SecurityTab />}
       {tab === 'updates' && <UpdatesTab />}
       {tab === 'about' && <AboutTab />}
     </>
@@ -90,7 +75,7 @@ function GeneralTab() {
     <div className="space-y-5">
       <Card>
         <div className="divide-y divide-line">
-          <Row title="Langue" description="Anglais prévu dans une prochaine mise à jour (M8).">
+          <Row title="Langue" description="Anglais prévu dans une prochaine mise à jour.">
             <span className="text-[13px] text-fg-muted">Français</span>
           </Row>
           <Row title="Thème" description="Thème clair prévu ultérieurement.">
@@ -119,7 +104,7 @@ function GeneralTab() {
             Ouvrir
           </Button>
         </div>
-        <p className="px-5 pb-4 text-[12px] text-fg-subtle">Le déplacement des modèles vers un autre disque sera proposé avec la gestion des modèles (M2).</p>
+        <p className="px-5 pb-4 text-[12px] text-fg-subtle">Moteurs, modèles et générations sont stockés dans ce dossier, sur ton PC uniquement.</p>
       </Card>
     </div>
   )
@@ -152,13 +137,13 @@ function ResourcesTab() {
             ))}
             {usage.gpus.length === 0 && (
               <div className="text-[12.5px] text-fg-muted">
-                Mesure de la mémoire vidéo en direct : disponible pour les cartes NVIDIA. Pour AMD et Intel, elle arrivera avec les moteurs locaux (M2).
+                Mesure de la mémoire vidéo en direct : disponible pour les cartes NVIDIA (nvidia-smi). Pour AMD et Intel, la page Modèles locaux affiche la mémoire utilisée par chaque modèle.
               </div>
             )}
             <Gauge label="Disque (données)" value={`${formatMB(usage.disk.freeMB)} libres`} pct={usage.disk.totalMB - usage.disk.freeMB} max={usage.disk.totalMB} tone="warn" />
           </div>
         )}
-        <div className="border-t border-line px-5 py-3 text-[12.5px] text-fg-muted">Téléchargements actifs : aucun (gestionnaire de téléchargements : M2).</div>
+        <ActiveDownloads />
       </Card>
       <HardwareCard
         hw={hw.data}
@@ -167,6 +152,20 @@ function ResourcesTab() {
           hw.setData(await api.hardware.get(true))
         }}
       />
+    </div>
+  )
+}
+
+function ActiveDownloads() {
+  const tasks = Object.values(useTaskStore((s) => s.tasks)).filter((t) => t.state === 'running')
+  return (
+    <div className="border-t border-line px-5 py-3">
+      <div className="text-[12.5px] text-fg-muted">Tâches actives : {tasks.length === 0 ? 'aucune' : tasks.length}</div>
+      <div className="mt-2 space-y-3">
+        {tasks.map((t) => (
+          <TaskProgress key={t.id} task={t} />
+        ))}
+      </div>
     </div>
   )
 }
@@ -180,22 +179,6 @@ function Gauge({ label, value, pct, max, tone }: { label: string; value: string;
       </div>
       <Meter value={pct} max={max} tone={tone} />
     </div>
-  )
-}
-
-function PlannedTab({ milestone, items }: { milestone: string; items: string[] }) {
-  return (
-    <Card>
-      <CardHeader title="Pas encore disponible" description={`Ces réglages arrivent avec l'étape ${milestone}.`} action={<Badge tone="warn">{milestone}</Badge>} />
-      <ul className="space-y-2 px-5 py-4">
-        {items.map((i) => (
-          <li key={i} className="flex gap-2 text-[13px] text-fg-muted">
-            <span className="mt-[8px] size-1 shrink-0 rounded-full bg-fg-subtle" />
-            {i}
-          </li>
-        ))}
-      </ul>
-    </Card>
   )
 }
 

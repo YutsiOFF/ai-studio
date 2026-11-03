@@ -23,7 +23,7 @@ describe('base de données', () => {
     db.close()
     db = openDatabase(join(dir, 'test.db'))
     const v = db.prepare('PRAGMA user_version').get() as { user_version: number }
-    expect(v.user_version).toBe(1)
+    expect(v.user_version).toBe(2)
   })
 })
 

@@ -5,6 +5,11 @@ import logo from '../logo.png'
 import { NAV } from '../nav'
 import { useAsync, api } from '../lib/hooks'
 import { cn } from './ui'
+import { TaskDock } from './Tasks'
+import { ErrorBoundary } from './ErrorBoundary'
+import { useTaskSync } from '../lib/tasks'
+
+const FULL_BLEED = ['/assistant', '/images', '/3d']
 
 const ACCEL_LABEL = { cuda: 'CUDA', vulkan: 'Vulkan', cpu: 'CPU' } as const
 
@@ -81,6 +86,8 @@ function Sidebar() {
 
 export function Layout() {
   const location = useLocation()
+  useTaskSync()
+  const full = FULL_BLEED.includes(location.pathname)
   return (
     <Tooltip.Provider delayDuration={300}>
       <div className="flex h-full">
@@ -88,17 +95,34 @@ export function Layout() {
         <main className="flex min-w-0 flex-1 flex-col">
           {/* Barre de titre : zone de déplacement, les boutons Windows sont dessinés par le système à droite. */}
           <div className="drag h-10 shrink-0" />
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          {full ? (
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-              className="mx-auto max-w-[1180px] px-10 pt-2 pb-12"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.25 }}
+              className="min-h-0 flex-1 border-t border-line"
             >
-              <Outlet />
+              <ErrorBoundary resetKey={location.pathname}>
+                <Outlet />
+              </ErrorBoundary>
             </motion.div>
-          </div>
+          ) : (
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className="mx-auto max-w-[1180px] px-10 pt-2 pb-12"
+              >
+                <ErrorBoundary resetKey={location.pathname}>
+                  <Outlet />
+                </ErrorBoundary>
+              </motion.div>
+            </div>
+          )}
+          <TaskDock />
         </main>
       </div>
     </Tooltip.Provider>

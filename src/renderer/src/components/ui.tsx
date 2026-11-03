@@ -60,7 +60,7 @@ export function Badge({ tone = 'neutral', children, className }: { tone?: BadgeT
   return (
     <span
       className={cn(
-        'inline-flex h-5 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold tracking-wide uppercase',
+        'inline-flex h-5 shrink-0 items-center gap-1 rounded-md px-1.5 text-[11px] font-semibold tracking-wide whitespace-nowrap uppercase',
         tone === 'neutral' && 'bg-surface-3 text-fg-muted',
         tone === 'local' && 'bg-local/12 text-local',
         tone === 'cloud' && 'bg-cloud/12 text-cloud',

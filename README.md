@@ -2,7 +2,7 @@
 
 Plateforme Windows tout-en-un pour utiliser des **IA gratuites**, en **local** (sur ton PC, sans clé API, sans compte, hors ligne) et dans le **Cloud** (fournisseurs réellement gratuits) : discussion, agents sur tes projets, génération d'images et génération 3D.
 
-> **État : version 0.1 — étape M1 (socle).** Ce qui fonctionne déjà est indiqué dans l'application ; les sections non terminées sont clairement marquées « En développement ».
+> **Version 0.2** — toutes les sections sont fonctionnelles. Les limites connues sont indiquées dans l'application et ci-dessous.
 
 ## Installer
 
@@ -14,20 +14,27 @@ Les mises à jour suivantes s'installent ensuite automatiquement.
 
 **Configuration minimale :** Windows 10 (22H2) ou 11, 64 bits, 8 Go de RAM. Aucune carte graphique obligatoire.
 
-## Fonctionnalités de la v0.1
+## Fonctionnalités
 
-| Module | État |
+| Module | Ce qui fonctionne |
 |---|---|
-| Interface complète, barre latérale, 9 sections | Disponible |
-| Analyse automatique du matériel (GPU NVIDIA / AMD / Intel, VRAM réelle, RAM, CPU, disque) et choix de l'accélération | Disponible |
-| Projets reliés à un dossier du PC (création, modification, retrait sans toucher au dossier) | Disponible |
-| Historique local des actions | Disponible |
-| Paramètres : démarrage avec Windows, notifications, ressources en direct, mises à jour automatiques | Disponible |
-| IA locales, bibliothèque de modèles, téléchargements | Étape M2 |
-| Fournisseurs Cloud gratuits | Étape M3 |
-| Agents dans les projets | Étape M4 |
-| Génération d'images | Étape M5 |
-| Génération 3D et segmentation | Étapes M6 – M7 |
+| **Analyse du PC** | GPU NVIDIA / AMD / Intel, VRAM réelle, RAM, CPU (AVX), disque ; choix automatique CUDA / Vulkan / CPU |
+| **Bibliothèque de modèles** | 17 modèles de discussion / code / vision + 3 modèles d'images, classés *Rapide / Hybride / Lent / Trop lourd* pour ce PC, vitesse estimée puis mesurée, **pack recommandé** en un clic, licence affichée |
+| **IA locales** | Moteur Ollama installé et piloté par l'application (ou Ollama existant réutilisé) : **aucune clé, aucun compte, hors ligne** après téléchargement. Téléchargements avec progression réelle, capacités (outils, vision) vérifiées auprès du moteur, mémoire utilisée en direct |
+| **IA Cloud gratuites** | 15 fournisseurs gratuits (OVHcloud sans clé, Gemini, Groq, Cerebras, OpenRouter `:free`, Mistral, NVIDIA NIM, GitHub Models, Cloudflare, Z.ai, Ollama Cloud…) + offres d'essai/payantes séparées. Clés chiffrées par Windows, test de connexion, compteur de requêtes, limites lues dans les réponses |
+| **Assistant** | Discussion en direct (Markdown, raisonnement, images jointes), modèles locaux et Cloud dans un même sélecteur |
+| **Agents sur projets** | Exploration, lecture, recherche, écriture, modification, déplacement, suppression (Corbeille), commandes. **Chaque modification et chaque commande est montrée (diff avant/après) et attend ta validation**. Timeline réelle en 9 étapes, annulation des modifications, arrêt immédiat, confinement au dossier du projet |
+| **Images** | stable-diffusion.cpp (CUDA / Vulkan / CPU) installé automatiquement ; Z-Image Turbo, SDXL, SD 1.5 ; texte → image, image de référence, variantes, formats, graine, historique |
+| **3D** | Image → 3D via TRELLIS (Cloud gratuit Hugging Face, tous PC) ; texte → image → 3D ; visualiseur (rotation, zoom, lumière, filaire, textures) ; **segmentation** (pièces disjointes, sélection de régions par angle) ; masquer / supprimer / renommer / exporter chaque partie ; export GLB, OBJ, STL ; import GLB/OBJ/STL/PLY |
+| **Historique, paramètres, mises à jour** | Journal local, ressources en direct, démarrage avec Windows, mises à jour automatiques |
+
+### Limites connues (affichées dans l'application)
+
+- **3D locale** (TripoSR / TripoSG) : pas encore intégrée — ces modèles exigent la compilation de dépendances CUDA sous Windows. La 3D passe par le Cloud gratuit (quota ~2 min de GPU/jour sans compte, 5 min avec un compte Hugging Face gratuit).
+- **Segmentation sémantique automatique** (nommer « lame », « garde »…) : non disponible librement en France (P3-SAM exclut l'UE). Le découpage est géométrique ; les parties se renomment à la main.
+- **Export FBX** : nécessite Blender, non intégré.
+- **Inpainting** : non intégré (prévu via ComfyUI).
+- **Anglais** : interface en français uniquement pour l'instant.
 
 ## Développer
 

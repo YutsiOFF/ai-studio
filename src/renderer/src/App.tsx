@@ -5,7 +5,11 @@ import { HomePage } from './pages/Home'
 import { ProjectsPage } from './pages/Projects'
 import { HistoryPage } from './pages/History'
 import { SettingsPage } from './pages/Settings'
-import { AssistantPage, ImagesPage, LibraryPage, LocalModelsPage, ThreeDPage } from './pages/PlannedPages'
+import { AssistantPage } from './pages/Assistant'
+import { ImagesPage } from './pages/Images'
+import { LibraryPage } from './pages/Library'
+import { LocalModelsPage } from './pages/LocalModels'
+import { ThreeDPage } from './pages/ThreeD'
 
 export function App() {
   return (
