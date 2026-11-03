@@ -1,0 +1,33 @@
+appId: io.github.yutsioff.aistudio
+productName: AI Studio
+copyright: Copyright © 2026 YutsiOFF
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**/*
+  - package.json
+  - resources/**/*
+  - '!**/*.map'
+asarUnpack:
+  - resources/**
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.png
+  artifactName: AI-Studio-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: AI Studio
+  uninstallDisplayName: AI Studio
+  deleteAppDataOnUninstall: false
+publish:
+  provider: github
+  owner: YutsiOFF
+  repo: ai-studio
+  releaseType: release

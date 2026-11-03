@@ -1,0 +1,52 @@
+{
+  "name": "ai-studio",
+  "version": "0.1.0",
+  "description": "Plateforme tout-en-un d'IA gratuites, locales et Cloud.",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "vitest run",
+    "dist": "electron-vite build && electron-builder --win --publish never",
+    "release": "electron-vite build && electron-builder --win --publish always"
+  },
+  "author": "YutsiOFF",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "44.9.0",
+    "electron-vite": "6.0.0",
+    "electron-builder": "26.17.0",
+    "vite": "8.3.4",
+    "@vitejs/plugin-react": "6.1.2",
+    "tailwindcss": "4.3.3",
+    "@tailwindcss/vite": "4.3.3",
+    "typescript": "5.9.3",
+    "vitest": "4.1.12",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/node": "22.20.5"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource-variable/jetbrains-mono": "5.3.0",
+    "@radix-ui/react-dialog": "1.3.1",
+    "@radix-ui/react-tooltip": "1.4.1",
+    "clsx": "2.1.1",
+    "electron-updater": "6.8.10",
+    "lucide-react": "1.59.0",
+    "motion": "14.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "7.18.4",
+    "systeminformation": "5.33.16",
+    "zod": "4.6.7",
+    "zustand": "5.0.15"
+  },
+  "productName": "AI Studio",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YutsiOFF/ai-studio.git"
+  }
+}
