@@ -147,6 +147,23 @@ export async function hfFileInfo(repo: string, path: string, token?: string): Pr
   }
 }
 
+/** Liste récursive des fichiers d'un dépôt Hugging Face public (avec tailles et SHA-256). */
+export async function hfListFiles(repo: string, token?: string): Promise<(HfFileInfo & { path: string })[]> {
+  const headers: Record<string, string> = { 'User-Agent': USER_AGENT }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(`https://huggingface.co/api/models/${repo}/tree/main?recursive=true`, { headers })
+  if (!res.ok) throw new Error(`Hugging Face ne répond pas (HTTP ${res.status}) pour ${repo}.`)
+  const list = (await res.json()) as { type: string; path: string; size: number; lfs?: { oid: string; size: number } }[]
+  return list
+    .filter((e) => e.type === 'file' && !/^\.|\/\.|\.(md|png|jpe?g|gif|mp4)$/i.test(e.path))
+    .map((f) => ({
+      path: f.path,
+      url: `https://huggingface.co/${repo}/resolve/main/${f.path.split('/').map(encodeURIComponent).join('/')}?download=true`,
+      size: f.lfs?.size ?? f.size,
+      sha256: f.lfs?.oid
+    }))
+}
+
 /** Vérifie si une adresse locale répond. */
 export async function isReachable(url: string, timeoutMs = 1500): Promise<boolean> {
   try {

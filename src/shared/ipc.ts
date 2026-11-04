@@ -109,7 +109,7 @@ export interface ImageJob {
 }
 
 export interface Mesh3DJob {
-  engine: 'triposr-local' | 'trellis' | 'trellis2' | 'trellis2-text' | 'shap-e' | 'partcrafter' | 'triposg' | 'step1x' | 'hunyuan21' | 'instantmesh' | 'hi3dgen'
+  engine: 'triposr-local' | 'triposg-local' | 'trellis' | 'trellis2' | 'trellis2-text' | 'shap-e' | 'partcrafter' | 'triposg' | 'step1x' | 'hunyuan21' | 'instantmesh' | 'hi3dgen'
   imagePath?: string
   seed: number
   quality: 'fast' | 'balanced' | 'high'
@@ -118,6 +118,33 @@ export interface Mesh3DJob {
   textureSize: number
   projectId?: string | null
   prompt?: string
+}
+
+export type Local3DEngineId = 'triposr' | 'triposg'
+export interface Local3DEngineStatus {
+  id: Local3DEngineId
+  installed: boolean
+  supported: boolean
+  reason?: string
+  sizeEstimateMB: number
+  note: string
+}
+export interface Local3DStatus {
+  device: 'cuda' | 'cpu'
+  vramMB: number
+  engines: Record<Local3DEngineId, Local3DEngineStatus>
+}
+
+/** Dernier état connu du quota GPU gratuit Hugging Face (ZeroGPU), lu dans les réponses réelles. */
+export interface GpuQuotaInfo {
+  /** Secondes restantes annoncées par Hugging Face, si connues. */
+  leftSeconds?: number
+  /** Heure de réinitialisation estimée (ISO), si annoncée. */
+  resetAt?: string
+  exhausted: boolean
+  /** Moment de la mesure (ISO). */
+  at: string
+  withAccount: boolean
 }
 
 export interface SpaceStatus {
@@ -193,6 +220,8 @@ export interface AiStudioApi {
     models(id: string, refresh?: boolean): Promise<Result<CloudModel[]>>
     hfToken(): Promise<boolean>
     setHfToken(token: string): Promise<Result<true>>
+    /** Connexion en un clic (navigateur) : la clé est récupérée et chiffrée automatiquement. */
+    oauth(provider: 'openrouter'): Promise<Result<true>>
   }
   chat: {
     list(projectId?: string | null): Promise<ConversationSummary[]>
@@ -219,12 +248,13 @@ export interface AiStudioApi {
     pickInput(): Promise<string | null>
   }
   local3d: {
-    status(): Promise<{ installed: boolean; device: 'cuda' | 'cpu'; sizeEstimateMB: number; note: string }>
-    install(): Promise<Result<true>>
-    remove(): Promise<void>
+    status(): Promise<Local3DStatus>
+    install(engine: Local3DEngineId): Promise<Result<true>>
+    remove(engine: Local3DEngineId): Promise<void>
   }
   mesh: {
     spaceStatus(): Promise<SpaceStatus[]>
+    quota(): Promise<GpuQuotaInfo | null>
     generate(job: Mesh3DJob): Promise<Result<GenerationRecord>>
     list(): Promise<GenerationRecord[]>
     import(): Promise<Result<GenerationRecord> | null>

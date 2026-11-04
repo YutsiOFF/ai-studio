@@ -105,9 +105,13 @@ function start(): void {
   const local3d = new Local3D(
     db,
     join(dataPath, 'engines', 'py3d'),
-    join(dataPath, 'models', '3d', 'triposr'),
+    join(dataPath, 'models', '3d'),
     outputDir,
-    async () => (await getHardware(dataPath)).assessment.accelerator,
+    async () => {
+      const hw = await getHardware(dataPath)
+      const gpu = hw.assessment.primaryGpuIndex != null ? hw.gpus[hw.assessment.primaryGpuIndex] : undefined
+      return { accelerator: hw.assessment.accelerator, vramMB: gpu?.vramMB ?? 0 }
+    },
     () => models.unloadAll()
   )
 

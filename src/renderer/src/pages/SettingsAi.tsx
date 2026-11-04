@@ -1,4 +1,4 @@
-import { CircleCheck, ExternalLink, KeyRound, Loader2, PlugZap, ShieldCheck, Trash2 } from 'lucide-react'
+import { CircleCheck, ExternalLink, KeyRound, Loader2, LogIn, PlugZap, ShieldCheck, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import type { ProviderView } from '@shared/ipc'
 import { Badge, Button, Card, CardHeader, Skeleton, Toggle, inputClass } from '../components/ui'
@@ -100,6 +100,7 @@ function ProviderRow({ p, onChange }: { p: ProviderView; onChange: () => void })
   const [key, setKey] = useState('')
   const [extra, setExtra] = useState<Record<string, string>>(p.extra)
   const [testing, setTesting] = useState(false)
+  const [connecting, setConnecting] = useState(false)
   const [result, setResult] = useState<string | null>(null)
   const c = p.config
   const b = BADGE[c.badge]!
@@ -144,9 +145,26 @@ function ProviderRow({ p, onChange }: { p: ProviderView; onChange: () => void })
               </Button>
             </>
           )}
+          {c.oauth && !p.configured && (
+            <Button
+              variant="primary"
+              icon={connecting ? Loader2 : LogIn}
+              disabled={connecting}
+              onClick={async () => {
+                setConnecting(true)
+                const r = await api.cloud.oauth(c.oauth!)
+                setConnecting(false)
+                if (!r.ok) return toast.error(r.error)
+                onChange()
+                await test()
+              }}
+            >
+              {connecting ? 'Termine dans le navigateur…' : 'Se connecter en 1 clic'}
+            </Button>
+          )}
           {c.keyRequired && (
             <Button variant={p.configured ? 'ghost' : 'secondary'} icon={KeyRound} onClick={() => setEditing((e) => !e)}>
-              {p.configured ? 'Modifier' : 'Ajouter une clé'}
+              {p.configured ? 'Modifier' : c.oauth ? 'Clé manuelle' : 'Ajouter une clé'}
             </Button>
           )}
         </div>

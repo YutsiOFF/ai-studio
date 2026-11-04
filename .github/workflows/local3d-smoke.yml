@@ -1,0 +1,33 @@
+name: Test 3D locale (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'test/**']
+    paths:
+      - src/main/local3d-spec.ts
+      - scripts/smoke-local3d.mts
+      - .github/workflows/local3d-smoke.yml
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [triposr, triposg]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v6
+      - name: Installation et génération réelles (processeur)
+        shell: bash
+        run: node --experimental-strip-types scripts/smoke-local3d.mts ${{ matrix.engine }} "$RUNNER_TEMP/py3d"
+      - uses: actions/upload-artifact@v5
+        if: success()
+        with:
+          name: smoke-${{ matrix.engine }}
+          path: ${{ runner.temp }}/py3d/${{ matrix.engine }}.glb

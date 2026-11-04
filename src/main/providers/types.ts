@@ -29,6 +29,9 @@ export type StreamEvent =
   | { type: 'usage'; inputTokens?: number; outputTokens?: number; tokensPerSecond?: number }
   | { type: 'rate-limit'; remaining?: number; limit?: number; reset?: string }
   | { type: 'done'; reason: string }
+  /** Routeur Auto : modèle réellement utilisé pour cette tentative. */
+  | { type: 'route'; provider: string; providerLabel: string; model: string }
+  | { type: 'route-fail'; text: string }
 
 export interface ModelInfo {
   id: string

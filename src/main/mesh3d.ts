@@ -14,6 +14,8 @@ import { logActivity, type Db } from './db'
 import { taskController, taskUpdate } from './events'
 import { saveGeneration, type GenerationRecord } from './images'
 import { USER_AGENT } from './net'
+import type { GpuQuotaInfo } from '@shared/ipc'
+import { parseQuotaError } from '@shared/quota'
 
 export interface Mesh3DJob {
   engine: string
@@ -50,7 +52,7 @@ export async function spaceStatus(space: string): Promise<Omit<SpaceStatus, 'eng
 }
 
 export async function allSpaceStatus(): Promise<SpaceStatus[]> {
-  return Promise.all(MESH_ENGINES.map(async (e) => ({ engine: e.id, ...(await spaceStatus(e.space)) })))
+  return Promise.all(MESH_ENGINES.filter((e) => e.location !== 'local').map(async (e) => ({ engine: e.id, ...(await spaceStatus(e.space)) })))
 }
 
 type GradioFile = { url?: string; path?: string } | string | null | undefined
@@ -217,6 +219,17 @@ const RUNNERS: Record<string, (c: RunCtx) => Promise<{ glb: GradioFile; preview?
   }
 }
 
+/** Dernier état connu du quota ZeroGPU, extrait des vraies réponses de Hugging Face. */
+let lastQuota: GpuQuotaInfo | null = null
+
+export function gpuQuota(withAccount: boolean): GpuQuotaInfo | null {
+  if (!lastQuota) return null
+  // Après la réinitialisation annoncée, l'ancienne mesure n'a plus de sens.
+  if (lastQuota.resetAt && Date.parse(lastQuota.resetAt) < Date.now()) return null
+  if (lastQuota.withAccount !== withAccount) return null
+  return lastQuota
+}
+
 export async function generateCloud3D(db: Db, outputDir: string, job: Mesh3DJob, allowRestricted = false): Promise<GenerationRecord> {
   const engine = MESH_ENGINES.find((e) => e.id === job.engine)
   const runner = RUNNERS[job.engine]
@@ -283,8 +296,18 @@ export async function generateCloud3D(db: Db, outputDir: string, job: Mesh3DJob,
   } catch (e) {
     const cancelled = ctrl.signal.aborted
     const raw = (e as Error).message ?? String(e)
-    const msg = /quota|exceeded|ZeroGPU|GPU task aborted/i.test(raw)
-      ? 'Quota GPU gratuit du jour épuisé (≈2 min sans compte, 5 min avec un compte Hugging Face gratuit, commun à tous les moteurs). Réessaie plus tard ou ajoute un jeton Hugging Face gratuit dans Paramètres > IA.'
+    const q = parseQuotaError(raw, Boolean(job.hfToken))
+    if (q) {
+      const { requestedSeconds: _r, ...info } = q
+      lastQuota = info
+    }
+    const wait = q?.resetAt ? ` Réinitialisation vers ${new Date(q.resetAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}.` : ''
+    const msg = q
+      ? q.requestedSeconds && q.leftSeconds
+        ? `${engine.label} demande ${q.requestedSeconds} s de GPU mais il te reste ${q.leftSeconds} s de quota gratuit aujourd’hui. Choisis un moteur plus léger (TRELLIS, TripoSG, Shap-E) ou la 3D locale, illimitée.${wait}`
+        : `Quota GPU gratuit du jour épuisé (commun à tous les moteurs Cloud).${wait} ${job.hfToken ? 'La 3D locale, elle, n’a aucun quota.' : 'Ajoute un jeton Hugging Face gratuit (Paramètres > IA) pour plus de quota, ou utilise la 3D locale, illimitée.'}`
+      : /GPU task aborted/i.test(raw)
+        ? `${engine.label} : la tâche GPU a dépassé sa durée maximale sur Hugging Face. Réessaie en qualité « Rapide ».`
       : /sleep|building|not running|Space is paused|503/i.test(raw)
         ? `${engine.label} est en veille ou en cours de démarrage sur Hugging Face. Réessaie dans une minute, ou choisis un autre moteur.`
         : `${engine.label} : ${raw}`

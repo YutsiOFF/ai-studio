@@ -17,6 +17,8 @@ import type { LocalModels } from './models'
 import { getProject } from './projects'
 import { listTree, resolveInside } from './projectfs'
 import { OllamaProvider } from './providers/ollama'
+import { AutoProvider } from './providers/auto'
+import { AUTO_PROVIDER } from '@shared/auto-router'
 import type { ChatMessage, LlmProvider, ToolCall } from './providers/types'
 import { findTool, needsApproval, toolSpecs, type Preview } from './tools'
 
@@ -140,6 +142,9 @@ export class ChatService {
       const light = (entry?.activeParamsB ?? 8) < 10
       return { provider: new OllamaProvider(this.ollamaUrl), tools: caps.tools, light }
     }
+    if (ref.provider === AUTO_PROVIDER) {
+      return { provider: new AutoProvider({ candidates: () => this.cloud.autoCandidates(), provider: (id) => this.cloud.provider(id) }), tools: null, light: false }
+    }
     const provider = this.cloud.provider(ref.provider)
     const models = await this.cloud.models(ref.provider).catch(() => [])
     const info = models.find((m) => m.id === ref.model)
@@ -239,6 +244,7 @@ ${map || '(dossier vide)'}${truncated ? '\n…' : ''}`
         const calls: ToolCall[] = []
         let tps: number | undefined
         let outTokens: number | undefined
+        let used = { provider: ref.provider, model: ref.model }
         for await (const ev of provider.chat({ model: ref.model, messages, tools }, run.controller.signal)) {
           if (ev.type === 'text') {
             text += ev.text
@@ -255,13 +261,18 @@ ${map || '(dossier vide)'}${truncated ? '\n…' : ''}`
             if (tps && ref.location === 'local') this.local.recordSpeed(ref.model, tps)
           } else if (ev.type === 'rate-limit') {
             this.event({ type: 'rate-limit', ...base, remaining: ev.remaining, limit: ev.limit })
+          } else if (ev.type === 'route') {
+            used = { provider: ev.provider, model: ev.model }
+            this.event({ type: 'status', ...base, text: `Auto : ${ev.model} via ${ev.providerLabel}` }, agent)
+          } else if (ev.type === 'route-fail') {
+            this.event({ type: 'status', ...base, text: ev.text }, agent)
           }
         }
         this.saveMessage(conversationId, 'assistant', text, {
           reasoning: reasoning || undefined,
           toolCalls: calls.length ? calls : undefined,
-          provider: ref.provider,
-          model: ref.model,
+          provider: used.provider,
+          model: used.model,
           location: ref.location,
           tokensPerSecond: tps,
           outputTokens: outTokens

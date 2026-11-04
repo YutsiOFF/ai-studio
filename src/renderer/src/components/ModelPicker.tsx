@@ -1,6 +1,7 @@
 import { Check, ChevronDown, Cloud, HardDrive, Search, Wrench } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { AUTO_PROVIDER, AUTO_REF } from '@shared/auto-router'
 import { refFromString, refToString } from '@shared/providers'
 import { api, useAsync } from '../lib/hooks'
 import { Badge, cn, inputClass } from './ui'
@@ -18,7 +19,15 @@ export interface ModelOption {
 /** Liste des modèles réellement utilisables : locaux installés + Cloud configurés. */
 export function useModelOptions() {
   return useAsync(async () => {
-    const out: { group: string; location: 'local' | 'cloud'; badge?: string; error?: string; models: ModelOption[] }[] = []
+    const out: { group: string; location: 'local' | 'cloud'; badge?: string; error?: string; hint?: string; models: ModelOption[] }[] = [
+      {
+        group: 'Automatique',
+        location: 'cloud',
+        badge: 'free-nokey',
+        hint: 'Choisit le meilleur modèle gratuit disponible et bascule tout seul sur un autre quand un fournisseur est saturé.',
+        models: [{ ref: AUTO_REF, label: 'Auto · meilleur modèle Cloud gratuit', location: 'cloud', providerLabel: 'Routeur Auto', tools: true, vision: true, badge: 'free-nokey' }]
+      }
+    ]
     const engine = await api.engine.status()
     if (engine.installed || engine.running) {
       const r = await api.models.installed()
@@ -68,6 +77,7 @@ export function useModelOptions() {
 export function describeRef(ref: string | undefined): { label: string; location: 'local' | 'cloud' | null; provider: string } {
   const r = ref ? refFromString(ref) : null
   if (!r) return { label: 'Choisir un modèle', location: null, provider: '' }
+  if (r.provider === AUTO_PROVIDER) return { label: 'Auto (Cloud gratuit)', location: 'cloud', provider: AUTO_PROVIDER }
   return { label: r.model, location: r.location, provider: r.provider }
 }
 
@@ -138,6 +148,7 @@ export function ModelPicker({ value, onChange, requireTools }: { value?: string;
                     {g.group}
                     {g.badge === 'free-nokey' && <Badge tone="accent">Sans clé</Badge>}
                   </div>
+                  {g.hint && <div className="px-2.5 pb-1 text-[11px] leading-snug text-fg-subtle">{g.hint}</div>}
                   {g.error && <div className="px-2.5 py-1 text-[11.5px] text-danger">{g.error}</div>}
                   {!g.error && g.models.length === 0 && <div className="px-2.5 py-1 text-[11.5px] text-fg-subtle">Aucun modèle.</div>}
                   {g.models.map((m) => {

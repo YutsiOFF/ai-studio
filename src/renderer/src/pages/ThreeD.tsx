@@ -21,7 +21,7 @@ import {
   Wand2
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { GenerationRecord, Mesh3DJob } from '@shared/ipc'
+import type { GenerationRecord, GpuQuotaInfo, Mesh3DJob } from '@shared/ipc'
 import { MESH_ENGINES, type MeshQuality } from '@shared/mesh-engines'
 import type * as THREE from 'three'
 import { ParticleForge, type ForgePhase } from '../components/ParticleForge'
@@ -77,6 +77,9 @@ export function ThreeDPage() {
   const [textBusy, setTextBusy] = useState(false)
   const space = useAsync(() => api.mesh.spaceStatus())
   const local3d = useAsync(() => api.local3d.status())
+  const quota = useAsync(() => api.mesh.quota())
+  const hasHf = useAsync(() => api.cloud.hfToken())
+  const [hfValue, setHfValue] = useState('')
   const library = useAsync(() => api.mesh.list())
   const imageStatus = useAsync(() => api.images.status())
   const hw = useAsync(() => api.hardware.get())
@@ -139,9 +142,10 @@ export function ThreeDPage() {
   }, [model, colors])
 
   const isLocal = engine.location === 'local'
+  const localSt = engine.localId ? local3d.data?.engines[engine.localId] : undefined
   const needsImage = engine.input !== 'text' && engine.input !== 'both'
   const canGenerate = engine.input === 'text' ? Boolean(textPrompt.trim()) : engine.input === 'both' ? Boolean(source || textPrompt.trim()) : Boolean(source)
-  const engineDown = isLocal ? !local3d.data?.installed : space.data?.find((x) => x.engine === engine.id)?.available === false
+  const engineDown = isLocal ? !localSt?.installed : space.data?.find((x) => x.engine === engine.id)?.available === false
 
   const generate = async () => {
     if (!canGenerate) return
@@ -157,6 +161,7 @@ export function ThreeDPage() {
     setBusy(false)
     if (!r.ok) {
       setForge(null)
+      void quota.reload()
       return toast.error(r.error)
     }
     void library.reload()
@@ -228,12 +233,22 @@ export function ThreeDPage() {
     refresh()
   }
 
-  const localTask = useTaskStore((st) => st.tasks['engine:local3d'])
+  const localTask = useTaskStore((st) => (engine.localId ? st.tasks[`engine:local3d:${engine.localId}`] : undefined))
+  const selectEngine = (id: string) => {
+    setEngineId(id as Mesh3DJob['engine'])
+    try {
+      localStorage.setItem('aistudio.mesh-engine', id)
+    } catch {
+      /* indisponible */
+    }
+  }
+  const bestLocal = (['triposg', 'triposr'] as const).find((id) => local3d.data?.engines[id]?.installed)
   const renderEngine = (e: (typeof MESH_ENGINES)[number]) => {
     const st = space.data?.find((x) => x.engine === e.id)
     const on = e.id === engine.id
     const local = e.location === 'local'
-    const ok = local ? local3d.data?.installed : st?.available
+    const lst = e.localId ? local3d.data?.engines[e.localId] : undefined
+    const ok = local ? lst?.installed : st?.available
     return (
       <button
         key={e.id}
@@ -242,12 +257,7 @@ export function ThreeDPage() {
             setLicenseFor(e)
             return
           }
-          setEngineId(e.id as Mesh3DJob['engine'])
-          try {
-            localStorage.setItem('aistudio.mesh-engine', e.id)
-          } catch {
-            /* indisponible */
-          }
+          selectEngine(e.id)
         }}
         className={cn('w-full rounded-xl border px-3 py-2.5 text-left transition-colors', on ? 'border-accent/50 bg-accent/[0.06]' : 'border-line bg-surface hover:border-line-strong')}
       >
@@ -257,10 +267,10 @@ export function ThreeDPage() {
           <span className="truncate text-[11px] text-fg-subtle">{e.input === 'text' ? 'texte → 3D' : e.input === 'both' ? 'texte ou image' : e.publisher}</span>
           <span className="flex-1" />
           {e.restricted && <Badge tone="warn">{allowRestricted ? 'Licence UE' : 'Verrouillé'}</Badge>}
-          {local && !local3d.data?.installed && <Badge tone="neutral">À installer</Badge>}
+          {local && lst && !lst.installed && <Badge tone="neutral">{lst.supported ? 'À installer' : 'Non compatible'}</Badge>}
           <span
             className={cn('size-2 shrink-0 rounded-full', (local ? local3d.data === undefined : st === undefined) ? 'bg-fg-subtle' : ok ? 'bg-accent' : local ? 'bg-fg-subtle' : 'bg-danger')}
-            title={local ? (local3d.data?.installed ? 'Installé' : 'Non installé') : st === undefined ? 'Vérification…' : st.available ? `Disponible${st.stage === 'SLEEPING' ? ' (en veille, démarrage ~1 min)' : ''}` : `Indisponible : ${st.error ?? st.stage}`}
+            title={local ? (lst?.installed ? 'Installé' : lst?.supported === false ? lst.reason : 'Non installé') : st === undefined ? 'Vérification…' : st.available ? `Disponible${st.stage === 'SLEEPING' ? ' (en veille, démarrage ~1 min)' : ''}` : `Indisponible : ${st.error ?? st.stage}`}
           />
         </div>
         {on && (
@@ -283,10 +293,14 @@ export function ThreeDPage() {
               <Badge tone="local">Illimité · hors ligne</Badge>
             </div>
             <div className="mt-2 space-y-1.5">{MESH_ENGINES.filter((e) => e.location === 'local').map(renderEngine)}</div>
-            {isLocal && local3d.data && !local3d.data.installed && (
+            {isLocal && localSt && !localSt.installed && (
               <div className="mt-2 rounded-xl border border-line-strong bg-surface p-3">
+                {!localSt.supported ? (
+                  <p className="text-[11.5px] text-warn">{localSt.reason}</p>
+                ) : (
+                <>
                 <p className="text-[11.5px] text-fg-muted">
-                  Installation unique (≈ {String(Math.round(local3d.data.sizeEstimateMB / 100) / 10).replace('.', ',')} Go : Python isolé, PyTorch, poids TripoSR). {local3d.data.note}
+                  Installation unique (≈ {String(Math.round(localSt.sizeEstimateMB / 100) / 10).replace('.', ',')} Go : Python isolé, PyTorch, poids {engine.label.replace(' (local)', '')}). {localSt.note}
                 </p>
                 {localTask?.state === 'running' ? (
                   <div className="mt-2">
@@ -298,14 +312,16 @@ export function ThreeDPage() {
                     variant="primary"
                     icon={Download}
                     onClick={async () => {
-                      const r = await api.local3d.install()
+                      const r = await api.local3d.install(engine.localId!)
                       if (!r.ok) toast.error(r.error)
-                      else toast.success('3D locale installée : génération illimitée sur ton PC.')
+                      else toast.success(`${engine.label} installé : génération illimitée sur ton PC.`)
                       void local3d.reload()
                     }}
                   >
-                    Installer la 3D locale
+                    Installer {engine.label.replace(' (local)', '')}
                   </Button>
+                )}
+                </>
                 )}
               </div>
             )}
@@ -314,9 +330,22 @@ export function ThreeDPage() {
               <Badge tone="cloud">Sans clé</Badge>
             </div>
             <div className="mt-2 space-y-1.5">{MESH_ENGINES.filter((e) => e.location !== 'local').map(renderEngine)}</div>
-            <p className="mt-2 text-[11px] leading-snug text-fg-subtle">
-              Quota GPU Cloud commun : ~2 min/jour sans compte, 5 min avec un jeton Hugging Face gratuit (Paramètres &gt; IA). La 3D locale n’a aucun quota.
-            </p>
+            <QuotaBox
+              quota={quota.data ?? null}
+              hasAccount={hasHf.data ?? false}
+              hfValue={hfValue}
+              setHfValue={setHfValue}
+              onSaveHf={async () => {
+                const r = await api.cloud.setHfToken(hfValue)
+                if (!r.ok) return toast.error(r.error)
+                setHfValue('')
+                toast.success('Compte Hugging Face ajouté : quota GPU gratuit plus élevé.')
+                void hasHf.reload()
+                void quota.reload()
+              }}
+              localLabel={bestLocal ? MESH_ENGINES.find((m) => m.localId === bestLocal)?.label : undefined}
+              onUseLocal={bestLocal && !isLocal ? () => selectEngine(`${bestLocal}-local`) : undefined}
+            />
           </div>
 
           {!needsImage && engine.input === 'text' && (
@@ -687,6 +716,56 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     <div className="flex items-center justify-between">
       <span className="text-[12.5px] text-fg-muted">{label}</span>
       {children}
+    </div>
+  )
+}
+
+function QuotaBox(props: {
+  quota: GpuQuotaInfo | null
+  hasAccount: boolean
+  hfValue: string
+  setHfValue: (v: string) => void
+  onSaveHf: () => void
+  localLabel?: string
+  onUseLocal?: () => void
+}) {
+  const { quota, hasAccount } = props
+  const reset = quota?.resetAt ? new Date(quota.resetAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : null
+  return (
+    <div className="mt-2 space-y-2 rounded-xl border border-line bg-surface p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[12px] font-medium">Quota GPU gratuit</span>
+        <span className="text-[11px] text-fg-subtle">{hasAccount ? 'Compte Hugging Face' : 'Sans compte'}</span>
+      </div>
+      {quota ? (
+        <p className={cn('text-[11.5px]', quota.leftSeconds ? 'text-fg-muted' : 'text-warn')}>
+          {quota.leftSeconds ? `Il restait ${quota.leftSeconds} s à la dernière tentative.` : 'Épuisé pour aujourd’hui.'}
+          {reset ? ` Réinitialisation vers ${reset}.` : ''}
+        </p>
+      ) : (
+        <p className="text-[11.5px] text-fg-muted">Commun à tous les moteurs Cloud ; Hugging Face l’indique quand il est épuisé.</p>
+      )}
+      {props.onUseLocal && quota && (
+        <Button className="w-full" icon={Cpu} onClick={props.onUseLocal}>
+          Continuer avec {props.localLabel}, sans quota
+        </Button>
+      )}
+      {!hasAccount && (
+        <div className="space-y-1.5 border-t border-line pt-2">
+          <p className="text-[11px] leading-snug text-fg-subtle">
+            Un compte Hugging Face gratuit donne plus de quota (5 min/jour). Crée un jeton « Read », puis colle-le ici : il est chiffré par Windows.
+          </p>
+          <div className="flex gap-1.5">
+            <input className={`${inputClass} h-8 min-w-0 flex-1 font-mono text-[11.5px]`} placeholder="hf_…" value={props.hfValue} onChange={(e) => props.setHfValue(e.target.value)} />
+            <Button className="h-8" disabled={!props.hfValue.trim()} onClick={props.onSaveHf}>
+              Ajouter
+            </Button>
+          </div>
+          <button className="text-[11px] text-accent hover:underline" onClick={() => api.app.openExternal('https://huggingface.co/settings/tokens/new?tokenType=read')}>
+            Créer un jeton gratuit sur huggingface.co
+          </button>
+        </div>
+      )}
     </div>
   )
 }

@@ -15,7 +15,8 @@ import type { OllamaEngine } from './engines/ollama'
 import { cancelTask, listTasks } from './events'
 import { getHardware, getUsage } from './hardware'
 import { deleteGeneration, listGenerations, type ImageEngine } from './images'
-import { allSpaceStatus, generateCloud3D, importMesh } from './mesh3d'
+import { openRouterLogin } from './oauth'
+import { allSpaceStatus, generateCloud3D, gpuQuota, importMesh } from './mesh3d'
 import type { Local3D } from './local3d'
 import type { LocalModels } from './models'
 import { createProject, getProject, listProjects, removeProject, updateProject } from './projects'
@@ -162,6 +163,14 @@ export function registerIpc(s: Services): void {
   })
   h('cloud:models', (id: unknown, refresh: unknown) => wrap(() => s.cloud.models(str.parse(id), refresh === true)))
   h('cloud:hf-token', () => Boolean(s.cloud.hfToken()))
+  h('cloud:oauth', (id: unknown) =>
+    wrap(async () => {
+      const pid = z.literal('openrouter').parse(id)
+      const key = await openRouterLogin()
+      s.cloud.setKey(pid, key, {})
+      return true as const
+    })
+  )
   h('cloud:set-hf-token', (token: unknown) => wrap(() => (s.cloud.setHfToken(z.string().max(200).parse(token)), true as const)))
 
   // ----- Assistant et agents -----
@@ -251,11 +260,12 @@ export function registerIpc(s: Services): void {
 
   // ----- 3D -----
   h('mesh:space-status', () => allSpaceStatus())
+  h('mesh:quota', () => gpuQuota(Boolean(s.cloud.hfToken())))
   h('mesh:generate', (job: unknown) =>
     wrap(() => {
       const j = z
         .object({
-          engine: z.enum(['triposr-local', 'trellis', 'trellis2', 'trellis2-text', 'shap-e', 'partcrafter', 'triposg', 'step1x', 'hunyuan21', 'instantmesh', 'hi3dgen']),
+          engine: z.enum(['triposr-local', 'triposg-local', 'trellis', 'trellis2', 'trellis2-text', 'shap-e', 'partcrafter', 'triposg', 'step1x', 'hunyuan21', 'instantmesh', 'hi3dgen']),
           imagePath: str.optional(),
           seed: z.number().int().min(0).max(2 ** 31),
           quality: z.enum(['fast', 'balanced', 'high']),
@@ -267,17 +277,18 @@ export function registerIpc(s: Services): void {
         })
         .parse(job)
       if (j.imagePath && !isInside(dataPath, j.imagePath)) throw new Error('Image invalide.')
-      if (j.engine === 'triposr-local') {
-        if (!j.imagePath) throw new Error('TripoSR a besoin d’une image de départ.')
-        return s.local3d.generate({ imagePath: j.imagePath, quality: j.quality, projectId: j.projectId, prompt: j.prompt })
+      if (j.engine === 'triposr-local' || j.engine === 'triposg-local') {
+        if (!j.imagePath) throw new Error('La 3D locale a besoin d’une image de départ.')
+        return s.local3d.generate(j.engine === 'triposr-local' ? 'triposr' : 'triposg', { imagePath: j.imagePath, quality: j.quality, seed: j.seed, projectId: j.projectId, prompt: j.prompt })
       }
       return generateCloud3D(db, s.outputDir, { ...j, hfToken: s.cloud.hfToken() }, readSettings(db).allowRestrictedLicenses)
     })
   )
   h('mesh:list', () => listGenerations(db, 'mesh3d'))
   h('local3d:status', () => s.local3d.status())
-  h('local3d:install', () => wrap(async () => (await s.local3d.install(), true as const)))
-  h('local3d:remove', () => s.local3d.remove())
+  const localEngine = z.enum(['triposr', 'triposg'])
+  h('local3d:install', (engine: unknown) => wrap(async () => (await s.local3d.install(localEngine.parse(engine)), true as const)))
+  h('local3d:remove', (engine: unknown) => s.local3d.remove(localEngine.parse(engine)))
   h('mesh:import', async () => {
     const res = await dialog.showOpenDialog(dialogParent()!, { title: 'Importer un modèle 3D', properties: ['openFile'], filters: [{ name: 'Modèles 3D', extensions: ['glb', 'gltf', 'obj', 'stl', 'ply'] }] })
     if (res.canceled || !res.filePaths[0]) return null

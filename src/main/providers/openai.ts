@@ -55,19 +55,23 @@ export class OpenAICompatProvider implements LlmProvider {
         tools: params ? params.includes('tools') : capTools ?? null,
         vision: modalities ? modalities.includes('image') : null,
         contextK: typeof m.context_length === 'number' ? Math.round(m.context_length / 1000) : undefined,
-        pricing: m.pricing as { prompt?: string; completion?: string } | undefined
+        pricing: m.pricing as { prompt?: string | number; completion?: string | number } | undefined,
+        // Certains fournisseurs sans clé (LLM7) listent aussi des modèles réservés aux comptes payants.
+        paidOnly: m.usage_based_only === true || m.tier === 'pro'
       }
     })
+    models = models.filter((m) => !m.paidOnly)
+    const zero = (v: string | number | undefined) => v !== undefined && v !== null && v !== '' && Number(v) === 0
     if (this.cfg.freeFilter === 'openrouter-free') {
-      models = models.filter((m) => m.id.endsWith(':free') || (m.pricing?.prompt === '0' && m.pricing?.completion === '0'))
+      models = models.filter((m) => m.id.endsWith(':free') || m.id.endsWith('-free') || m.id.endsWith('/free') || (zero(m.pricing?.prompt) && zero(m.pricing?.completion)))
     } else if (this.cfg.freeFilter === 'allowlist' && this.cfg.allowlist) {
       const allowed = new Set(this.cfg.allowlist)
       models = models.filter((m) => allowed.has(m.id))
-      for (const id of this.cfg.allowlist) if (!models.some((m) => m.id === id)) models.push({ id, label: id, tools: null, vision: null, contextK: undefined, pricing: undefined })
+      for (const id of this.cfg.allowlist) if (!models.some((m) => m.id === id)) models.push({ id, label: id, tools: null, vision: null, contextK: undefined, pricing: undefined, paidOnly: false })
     }
     // Les modèles d'embedding, d'audio ou d'image ne sont pas des modèles de discussion.
-    models = models.filter((m) => !/embed|whisper|tts|rerank|moderation|guard|dall-e|imagen|veo|audio/i.test(m.id))
-    return models.map(({ pricing: _p, ...m }) => m).sort((a, b) => a.label.localeCompare(b.label))
+    models = models.filter((m) => !/embed|whisper|voxtral|tts|rerank|moderation|guard|dall-e|imagen|veo|audio|stable-diffusion|image|kling|seedance|bge-|krea|chroma-v/i.test(m.id))
+    return models.map(({ pricing: _p, paidOnly: _x, ...m }) => m).sort((a, b) => a.label.localeCompare(b.label))
   }
 
   async *chat(req: ChatRequest, signal: AbortSignal): AsyncIterable<StreamEvent> {

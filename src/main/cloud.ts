@@ -5,6 +5,7 @@
 import { safeStorage } from 'electron'
 import { CLOUD_PROVIDERS, type CloudProvider } from '@shared/providers'
 import { logActivity, type Db } from './db'
+import { modelScore, type AutoCandidate } from '@shared/auto-router'
 import { OpenAICompatProvider } from './providers/openai'
 import type { ModelInfo } from './providers/types'
 
@@ -102,6 +103,15 @@ export class CloudProviders {
     const models = await this.provider(id).listModels()
     this.modelsCache.set(id, { at: Date.now(), models })
     return models
+  }
+
+  /** Candidats du routeur Auto : tous les modèles des fournisseurs gratuits actifs (sans clé ou avec ta clé). */
+  async autoCandidates(): Promise<AutoCandidate[]> {
+    const usable = this.states().filter((s) => s.enabled && s.configured && ['free', 'free-nokey'].includes(this.config(s.id).badge))
+    const lists = await Promise.all(usable.map((s) => this.models(s.id).catch(() => [] as ModelInfo[])))
+    return usable.flatMap((s, i) =>
+      lists[i]!.map((m) => ({ provider: s.id, providerLabel: this.config(s.id).label, model: m.id, score: modelScore(m.id), tools: m.tools, vision: m.vision }))
+    )
   }
 
   /** Jeton Hugging Face facultatif (compte gratuit : quota GPU 3D plus élevé). */

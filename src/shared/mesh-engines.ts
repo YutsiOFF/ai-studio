@@ -24,6 +24,8 @@ export interface MeshEngineInfo {
   location?: 'cloud' | 'local'
   /** Entrée attendue : image, texte, ou l'un des deux. */
   input?: 'image' | 'text' | 'both'
+  /** Identifiant du moteur local (installation via la page 3D). */
+  localId?: 'triposr' | 'triposg'
 }
 
 export const MESH_ENGINES: MeshEngineInfo[] = [
@@ -38,7 +40,22 @@ export const MESH_ENGINES: MeshEngineInfo[] = [
     options: {},
     gpuSeconds: 'illimité (ton PC)',
     location: 'local',
-    input: 'image'
+    input: 'image',
+    localId: 'triposr'
+  },
+  {
+    id: 'triposg-local',
+    label: 'TripoSG (local)',
+    publisher: 'VAST (Tripo)',
+    space: 'VAST-AI/TripoSG',
+    license: 'MIT',
+    description: 'Bien plus détaillé que TripoSR : géométrie fine et nette, sur ta carte NVIDIA, sans quota ni Internet après installation. Forme seule (sans texture).',
+    output: 'geometry',
+    options: {},
+    gpuSeconds: 'illimité (ton PC)',
+    location: 'local',
+    input: 'image',
+    localId: 'triposg'
   },
   {
     id: 'trellis2',

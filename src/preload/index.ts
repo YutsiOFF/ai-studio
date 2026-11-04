@@ -58,7 +58,8 @@ const api: AiStudioApi = {
     test: inv('cloud:test') as never,
     models: inv('cloud:models') as never,
     hfToken: inv('cloud:hf-token') as never,
-    setHfToken: inv('cloud:set-hf-token') as never
+    setHfToken: inv('cloud:set-hf-token') as never,
+    oauth: inv('cloud:oauth') as never
   },
   chat: {
     list: inv('chat:list') as never,
@@ -87,6 +88,7 @@ const api: AiStudioApi = {
   local3d: { status: inv('local3d:status') as never, install: inv('local3d:install') as never, remove: inv('local3d:remove') as never },
   mesh: {
     spaceStatus: inv('mesh:space-status') as never,
+    quota: inv('mesh:quota') as never,
     generate: inv('mesh:generate') as never,
     list: inv('mesh:list') as never,
     import: inv('mesh:import') as never,

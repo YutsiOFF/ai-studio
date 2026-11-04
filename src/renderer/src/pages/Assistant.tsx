@@ -1,3 +1,4 @@
+import { AUTO_REF } from '@shared/auto-router'
 import {
   ArrowUp,
   Bot,
@@ -90,7 +91,7 @@ export function AssistantPage() {
   const projects = useAsync(() => api.projects.list())
   const [selected, setSelected] = useState<string | null>(null)
   const [detail, setDetail] = useState<ConversationDetail | null>(null)
-  const [draftModel, setDraftModel] = useState<string | undefined>(getLastModel())
+  const [draftModel, setDraftModel] = useState<string | undefined>(getLastModel() ?? AUTO_REF)
   const [draftProject, setDraftProject] = useState<string | null>(null)
   const [live, setLive] = useState<Live | null>(null)
   const [panel, setPanel] = useState(true)

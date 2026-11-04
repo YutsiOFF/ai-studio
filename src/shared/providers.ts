@@ -24,6 +24,8 @@ export interface CloudProvider {
   extraHeaders?: Record<string, string>
   /** Valeur envoyée comme clé quand le fournisseur accepte l'accès anonyme mais attend un en-tête Authorization. */
   anonymousKey?: string
+  /** Connexion en un clic (OAuth) proposée à la place de la clé à copier. */
+  oauth?: 'openrouter'
   knownLimits: string
   asOf: string
   hosting: string
@@ -36,7 +38,7 @@ export const CLOUD_PROVIDERS: CloudProvider[] = [
     id: 'ovhcloud', label: 'OVHcloud AI Endpoints', badge: 'free-nokey',
     baseUrl: 'https://oai.endpoints.kepler.ai.cloud.ovh.net/v1', keyRequired: false,
     signupUrl: 'https://endpoints.ai.cloud.ovh.net/', freeFilter: 'all',
-    knownLimits: 'Sans clé : 2 requêtes/min par modèle. Avec clé : 400 requêtes/min.', asOf: '2026-11-03',
+    knownLimits: 'Sans clé : 2 requêtes/min par modèle (Qwen3.5 397B, gpt-oss 120B, Llama 3.3 70B…). Avec clé : 400 requêtes/min.', asOf: '2026-11-04',
     hosting: 'France (UE)', trainsOnFreeData: 'non',
     notes: 'Fonctionne immédiatement, sans compte ni clé.'
   },
@@ -52,7 +54,7 @@ export const CLOUD_PROVIDERS: CloudProvider[] = [
     id: 'llm7', label: 'LLM7.io', badge: 'free-nokey',
     baseUrl: 'https://api.llm7.io/v1', keyRequired: false, anonymousKey: 'unused',
     signupUrl: 'https://token.llm7.io/', freeFilter: 'all',
-    knownLimits: 'Sans clé : ~30 requêtes/min ; davantage avec un jeton gratuit (adresse e-mail).', asOf: '2026-11-04',
+    knownLimits: 'Sans clé : environ 60 requêtes/heure, modèles « turbo » uniquement (DeepSeek V4 Flash, GLM 5.3 Flash, MiniMax M2.7…) ; davantage avec un jeton gratuit.', asOf: '2026-11-04',
     hosting: 'Inconnu', trainsOnFreeData: 'inconnu', notes: 'Service communautaire, sans garantie de disponibilité.'
   },
   {
@@ -106,7 +108,7 @@ export const CLOUD_PROVIDERS: CloudProvider[] = [
   {
     id: 'openrouter', label: 'OpenRouter (modèles :free)', badge: 'free',
     baseUrl: 'https://openrouter.ai/api/v1', keyRequired: true,
-    signupUrl: 'https://openrouter.ai/keys', freeFilter: 'openrouter-free',
+    signupUrl: 'https://openrouter.ai/keys', freeFilter: 'openrouter-free', oauth: 'openrouter',
     extraHeaders: { 'HTTP-Referer': 'https://github.com/YutsiOFF/ai-studio', 'X-Title': 'AI Studio' },
     knownLimits: '20 req/min ; 50 req/jour sans achat de crédits.', asOf: '2026-11-03',
     hosting: 'Variable selon le modèle', trainsOnFreeData: 'possible', notes: 'Seuls les modèles gratuits (suffixe :free) sont proposés.'
@@ -149,10 +151,10 @@ export const CLOUD_PROVIDERS: CloudProvider[] = [
     hosting: 'Singapour', trainsOnFreeData: 'non'
   },
   {
-    id: 'ollama-cloud', label: 'Ollama Cloud', badge: 'free',
+    id: 'ollama-cloud', label: 'Ollama Cloud', badge: 'paid',
     baseUrl: 'https://ollama.com/v1', keyRequired: true,
     signupUrl: 'https://ollama.com/settings/keys', freeFilter: 'all',
-    knownLimits: 'Offre gratuite limitée (à vérifier sur ollama.com).', asOf: '2026-11-03', hosting: 'États-Unis', trainsOnFreeData: 'non',
+    knownLimits: 'Plus d’offre gratuite : facturé au token (page Tarifs d’ollama.com, consultée le 4 nov. 2026).', asOf: '2026-11-04', hosting: 'États-Unis', trainsOnFreeData: 'non',
     notes: 'Calcul sur les serveurs d’Ollama : c’est du Cloud, pas du local.'
   },
   {
