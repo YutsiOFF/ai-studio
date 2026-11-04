@@ -73,7 +73,7 @@ for (const f of files) await download(`https://huggingface.co/${spec.weights.rep
 console.log('::endgroup::')
 
 console.log('::group::détourage + image de test')
-sh(py, ['-c', 'import rembg; rembg.new_session()'])
+sh(py, ['-c', spec.warmup(weights)])
 const img = join(root, 'test.png')
 sh(py, ['-c', `from PIL import Image, ImageDraw
 im = Image.new("RGB", (512, 512), "white")

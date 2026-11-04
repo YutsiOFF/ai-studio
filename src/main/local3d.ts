@@ -254,9 +254,9 @@ export class Local3D {
       }
       writeFileSync(join(wdir, '.complete'), new Date().toISOString())
 
-      // 6. Modèle de détourage (rembg) téléchargé maintenant pour fonctionner hors ligne ensuite
-      up('Préparation du détourage automatique')
-      await this.run(spec, this.python(spec), ['-c', 'import rembg; rembg.new_session()'], () => undefined, ctrl.signal)
+      // 6. Premier chargement en ligne : détourage (rembg) et fichiers annexes mis en cache pour fonctionner hors ligne
+      up('Vérification du modèle (premier chargement)')
+      await this.run(spec, this.python(spec), ['-c', spec.warmup(wdir)], () => undefined, ctrl.signal)
 
       writeFileSync(join(envDir, 'ready.json'), JSON.stringify({ version: spec.setupVersion, device, installedAt: new Date().toISOString() }))
       logActivity(this.db, 'engine.installed', `3D locale installée (${spec.label}, ${device.toUpperCase()})`)
@@ -316,7 +316,7 @@ export class Local3D {
       let result: { device?: string; seconds?: number; faces?: number } = {}
       await new Promise<void>((resolve, reject) => {
         const child = spawn(this.python(spec), [join(this.envDir(spec), 'worker.py'), ...args], {
-          env: { ...this.env(spec), HF_HUB_OFFLINE: '1' },
+          env: this.env(spec),
           windowsHide: true
         })
         this.proc = child

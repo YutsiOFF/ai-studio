@@ -24,6 +24,8 @@ export interface Local3DSpec {
   /** Fichiers ajoutés au dossier source (modules de remplacement). */
   extraFiles: Record<string, string>
   worker: string
+  /** Script Python exécuté une fois à l'installation (en ligne) : met en cache ce que le modèle télécharge au premier chargement. */
+  warmup: (weightsDir: string) => string
   weights: { repo: string; files: 'all' | string[] }
   /** Version du montage : changer cette valeur force une réinstallation propre. */
   setupVersion: number
@@ -281,6 +283,8 @@ export const LOCAL3D_SPECS: Record<Local3DEngineId, Local3DSpec> = {
     patches: { 'tsr/models/isosurface.py': () => TRIPOSR_ISOSURFACE_PY },
     extraFiles: {},
     worker: TRIPOSR_WORKER_PY,
+    // TSR télécharge la configuration de facebook/dino-vitb16 à la construction du modèle.
+    warmup: (w) => `import rembg; rembg.new_session()\nfrom tsr.system import TSR\nTSR.from_pretrained(${JSON.stringify(w)}, config_name="config.yaml", weight_name="model.ckpt")\nprint("ok")`,
     weights: { repo: 'stabilityai/TripoSR', files: ['config.yaml', 'model.ckpt'] },
     setupVersion: 2,
     requiresCuda: false,
@@ -317,6 +321,7 @@ export const LOCAL3D_SPECS: Record<Local3DEngineId, Local3DSpec> = {
     patches: { 'triposg/inference_utils.py': patchTripoSGInferenceUtils },
     extraFiles: {},
     worker: TRIPOSG_WORKER_PY,
+    warmup: (w) => `import rembg; rembg.new_session()\nimport torch\nfrom triposg.pipelines.pipeline_triposg import TripoSGPipeline\nTripoSGPipeline.from_pretrained(${JSON.stringify(w)})\nprint("ok")`,
     weights: { repo: 'VAST-AI/TripoSG', files: 'all' },
     setupVersion: 1,
     requiresCuda: true,
