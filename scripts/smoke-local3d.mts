@@ -87,7 +87,7 @@ const out = join(root, `${engine}.glb`)
 const args =
   engine === 'triposr'
     ? ['--mc', '128']
-    : ['--steps', '2', '--dense', '6', '--depth', '7', '--faces', '20000', '--seed', '1']
+    : ['--steps', '12', '--dense', '7', '--depth', '8', '--faces', '20000', '--seed', '1']
 const t = Date.now()
 const r = spawnSync(py, [join(envDir, 'worker.py'), '--image', img, '--out', out, '--weights', weights, '--device', 'cpu', ...args], { env: { ...env, HF_HUB_OFFLINE: '1' }, encoding: 'utf8' })
 console.log(r.stdout)

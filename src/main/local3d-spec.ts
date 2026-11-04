@@ -218,7 +218,7 @@ def main():
         )
     v, f = out.samples[0]
     if v is None:
-        raise RuntimeError("L'extraction du maillage a échoué (forme vide).")
+        raise RuntimeError("Aucune surface trouvée : le modèle n'a pas reconnu d'objet. Essaie une image plus nette, un objet bien détouré, ou la qualité « Équilibrée ».")
     emit(stage="Extraction du maillage terminée")
     mesh = trimesh.Trimesh(np.asarray(v, dtype=np.float32), np.ascontiguousarray(f))
     if a.faces > 0 and len(mesh.faces) > a.faces:
@@ -249,6 +249,13 @@ export function patchTripoSGInferenceUtils(src: string): string {
   s = s.replace(/^import torch\s*$/m, 'import torch\n_HALF = torch.float16 if torch.cuda.is_available() else torch.float32')
   if (!s.includes('_HALF = torch.float16')) throw new Error('Correctif TripoSG : import torch introuvable.')
   return s
+}
+
+/** Évite un plantage opaque quand aucune surface n'est trouvée : le worker affiche alors un message clair. */
+export function patchTripoSGPipeline(src: string): string {
+  const a = 'meshes = [trimesh.Trimesh(mesh_v_f[0].astype(np.float32), mesh_v_f[1]) for mesh_v_f in output]'
+  if (!src.includes(a)) throw new Error('Correctif TripoSG : conversion du maillage introuvable.')
+  return src.replace(a, 'meshes = [trimesh.Trimesh(mesh_v_f[0].astype(np.float32), mesh_v_f[1]) if mesh_v_f[0] is not None else None for mesh_v_f in output]')
 }
 
 export const LOCAL3D_SPECS: Record<Local3DEngineId, Local3DSpec> = {
@@ -318,7 +325,7 @@ export const LOCAL3D_SPECS: Record<Local3DEngineId, Local3DSpec> = {
       'rembg==2.0.61',
       'onnxruntime==1.20.1'
     ],
-    patches: { 'triposg/inference_utils.py': patchTripoSGInferenceUtils },
+    patches: { 'triposg/inference_utils.py': patchTripoSGInferenceUtils, 'triposg/pipelines/pipeline_triposg.py': patchTripoSGPipeline },
     extraFiles: {},
     worker: TRIPOSG_WORKER_PY,
     warmup: (w) => `import rembg; rembg.new_session()\nimport torch\nfrom triposg.pipelines.pipeline_triposg import TripoSGPipeline\nTripoSGPipeline.from_pretrained(${JSON.stringify(w)})\nprint("ok")`,
