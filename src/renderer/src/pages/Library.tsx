@@ -388,7 +388,7 @@ function ThreeDLibrary({ local3D }: { local3D: boolean }) {
   return (
     <div className="space-y-3">
       <Card className="px-5 py-4 text-[13px] text-fg-muted">
-        <span className="text-fg">TripoSR</span> tourne entièrement sur ton PC ({local3D ? 'accéléré par ta carte NVIDIA' : 'sur le processeur, plus lentement'}), sans quota. Les autres moteurs tournent gratuitement sur les GPU de Hugging Face, <span className="text-fg">sans clé ni compte</span>, avec un quota commun : ~2 min par jour sans compte, 5 min avec un compte Hugging Face gratuit.
+        <span className="text-fg">TripoSR</span> et <span className="text-fg">TripoSG</span> tournent entièrement sur ton PC, sans quota ({local3D ? 'accélérés par ta carte NVIDIA' : 'TripoSR sur le processeur ; TripoSG demande une carte NVIDIA'}). Les autres moteurs tournent gratuitement sur les GPU de Hugging Face, <span className="text-fg">sans clé ni compte</span>, avec un quota commun limité (plus élevé avec un compte Hugging Face gratuit : 5 min par jour).
       </Card>
       <Card>
         <ul className="divide-y divide-line">

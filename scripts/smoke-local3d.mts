@@ -50,7 +50,7 @@ const zip = join(envDir, '_dl', 'src.zip')
 await download(spec.sourceZip, zip)
 const tmp = join(envDir, '_dl', 'src')
 mkdirSync(tmp, { recursive: true })
-sh('tar', ['-xf', zip, '-C', tmp])
+sh(py, ['-c', 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])', zip, tmp])
 const top = readdirSync(tmp).find((d) => existsSync(join(tmp, d, spec.packageDir)))!
 const srcDir = join(envDir, 'src')
 rmSync(srcDir, { recursive: true, force: true })
