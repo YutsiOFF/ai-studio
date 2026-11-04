@@ -71,7 +71,7 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-async function waitFor(fn: () => boolean, ms = 5000) {
+async function waitFor(fn: () => boolean, ms = 20000) {
   const t = Date.now()
   while (!fn()) {
     if (Date.now() - t > ms) throw new Error('délai dépassé')

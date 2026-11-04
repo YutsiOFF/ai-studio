@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import type { Settings, UpdateStatus } from '@shared/types'
 import { HardwareCard } from '../components/HardwareCard'
 import { AiTab, SecurityTab } from './SettingsAi'
+import { McpTab } from './SettingsMcp'
 import { Badge, Button, Card, CardHeader, Meter, PageHeader, Skeleton, Toggle, cn, formatMB } from '../components/ui'
 import { api, useAsync, usePolling } from '../lib/hooks'
 import { toast } from '../lib/toast'
@@ -14,6 +15,7 @@ const TABS = [
   { id: 'general', label: 'Général' },
   { id: 'resources', label: 'Ressources' },
   { id: 'ai', label: 'IA' },
+  { id: 'mcp', label: 'Connexions' },
   { id: 'security', label: 'Sécurité' },
   { id: 'updates', label: 'Mises à jour' },
   { id: 'about', label: 'À propos' }
@@ -40,6 +42,7 @@ export function SettingsPage() {
       {tab === 'general' && <GeneralTab />}
       {tab === 'resources' && <ResourcesTab />}
       {tab === 'ai' && <AiTab />}
+      {tab === 'mcp' && <McpTab />}
       {tab === 'security' && <SecurityTab />}
       {tab === 'updates' && <UpdatesTab />}
       {tab === 'about' && <AboutTab />}

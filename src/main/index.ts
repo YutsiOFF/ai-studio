@@ -10,6 +10,7 @@ import { OllamaEngine } from './engines/ollama'
 import { getHardware } from './hardware'
 import { ImageEngine } from './images'
 import { Local3D } from './local3d'
+import { McpManager } from './mcp'
 import { isInside, registerIpc } from './ipc'
 import { LocalModels } from './models'
 import { readSettings } from './settings'
@@ -90,6 +91,10 @@ function start(): void {
   const models = new LocalModels(db, ollama)
   const cloud = new CloudProviders(db)
   const chat = new ChatService(db, models, cloud, () => ollama!.ensureRunning())
+  const mcp = new McpManager(db, join(dataPath, 'mcp.json'))
+  chat.setMcp(mcp)
+  mcp.startEnabled()
+  app.on('before-quit', () => void mcp.closeAll())
   const images = new ImageEngine(
     db,
     join(dataPath, 'engines', 'sdcpp'),
@@ -115,7 +120,7 @@ function start(): void {
     () => models.unloadAll()
   )
 
-  registerIpc({ db, dataPath, outputDir, window: () => mainWindow, ollama, models, cloud, chat, images, local3d })
+  registerIpc({ db, dataPath, outputDir, window: () => mainWindow, ollama, models, cloud, chat, images, local3d, mcp })
   mainWindow = createWindow()
   mainWindow.on('closed', () => {
     mainWindow = null

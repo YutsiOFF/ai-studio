@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { refFromString, type ModelRef } from '@shared/providers'
+import type { McpManager } from './mcp'
 import type { ChatEvent, ConversationDetail, ConversationSummary, FileChange, StoredAgentEvent, StoredMessage, ToolCallView } from '@shared/chat'
 import type { CloudProviders } from './cloud'
 import { logActivity, type Db } from './db'
@@ -34,6 +35,7 @@ interface Run {
 
 export class ChatService {
   private runs = new Map<string, Run>()
+  private mcp: McpManager | null = null
 
   constructor(
     private readonly db: Db,
@@ -41,6 +43,11 @@ export class ChatService {
     private readonly cloud: CloudProviders,
     private readonly ollamaUrl: () => Promise<string>
   ) {}
+
+  /** Applications connectées par MCP (Roblox Studio…) : leurs outils sont proposés au modèle. */
+  setMcp(m: McpManager): void {
+    this.mcp = m
+  }
 
   // ---------- Conversations ----------
 
@@ -202,7 +209,16 @@ export class ChatService {
   }
 
   private systemPrompt(projectId: string | null): string {
-    const base = "Tu es l'assistant d'AI Studio. Réponds en français, de façon claire et concise, en Markdown."
+    const connected = this.mcp?.connectedLabels() ?? []
+    const base = `Tu es l'assistant d'AI Studio. Réponds en français, de façon claire et concise, en Markdown.${
+      connected.length
+        ? `\n\nApplications connectées (outils préfixés mcp_) : ${connected.join(', ')}. Utilise leurs outils quand la demande les concerne. ${
+            connected.includes('Roblox Studio')
+              ? 'Roblox Studio : commence par list_roblox_studios pour obtenir le studio_id à passer aux autres outils ; explore (search_game_tree, inspect_instance, script_read) avant de modifier ; écris du Luau propre et explique ce que tu changes. '
+              : ''
+          }Les actions qui modifient quelque chose sont validées par l'utilisateur.`
+        : ''
+    }`
     if (!projectId) return base
     const p = getProject(this.db, projectId)!
     const { entries, truncated } = listTree(p.folder, p.folder, 2, 150)
@@ -235,7 +251,8 @@ ${map || '(dossier vide)'}${truncated ? '\n…' : ''}`
         throw new Error(`Le modèle ${ref.model} ne sait pas utiliser d'outils (vérifié auprès du moteur). Choisis un modèle compatible « Agent » ou passe en mode Discussion.`)
       }
       if (agent && project && !project.folderExists) throw new Error("Le dossier du projet n'existe plus.")
-      const tools = agent ? toolSpecs(light) : undefined
+      const mcpTools = toolsSupported === false ? [] : (this.mcp?.specs() ?? [])
+      const tools = agent ? [...toolSpecs(light), ...mcpTools] : mcpTools.length ? mcpTools : undefined
 
       for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
         const messages: ChatMessage[] = [{ role: 'system', content: this.systemPrompt(projectId) }, ...this.history(conversationId)]
@@ -278,11 +295,15 @@ ${map || '(dossier vide)'}${truncated ? '\n…' : ''}`
           outputTokens: outTokens
         })
         this.event({ type: 'message-saved', ...base })
-        if (!calls.length || !agent || !project) break
+        if (!calls.length || !tools) break
 
         for (const call of calls) {
           if (run.controller.signal.aborted) break
-          const output = await this.runTool(run, project.id, project.folder, call)
+          const output = call.name.startsWith('mcp_')
+            ? await this.runMcpTool(run, call)
+            : agent && project
+              ? await this.runTool(run, project.id, project.folder, call)
+              : `Erreur : l'outil « ${call.name} » n'est disponible qu'en mode Agent, dans un projet.`
           this.saveMessage(conversationId, 'tool', output, { toolCallId: call.id, toolName: call.name })
         }
         if (run.controller.signal.aborted) break
@@ -294,6 +315,38 @@ ${map || '(dossier vide)'}${truncated ? '\n…' : ''}`
       const message = aborted ? undefined : friendlyError(e)
       if (message) this.saveMessage(conversationId, 'assistant', '', { error: message, provider: ref.provider, model: ref.model, location: ref.location })
       this.event({ type: 'run-end', ...base, status: aborted ? 'stopped' : 'error', error: message }, agent)
+    }
+  }
+
+  private async runMcpTool(run: Run, call: ToolCall): Promise<string> {
+    const base = { conversationId: run.conversationId, runId: run.runId }
+    const t = this.mcp?.resolve(call.name)
+    const view: ToolCallView = { id: call.id, name: call.name, label: t ? `${t.serverLabel} · ${t.tool}` : call.name, risk: t?.readOnly ? 'read' : 'exec', args: call.args }
+    this.event({ type: 'tool-call', ...base, call: view }, true)
+    if (!t) {
+      this.event({ type: 'tool-status', ...base, callId: call.id, status: 'error', summary: 'Application déconnectée' }, true)
+      return `Erreur : l'outil « ${call.name} » n'est plus disponible (application déconnectée).`
+    }
+    if (!t.readOnly && !run.allowAll) {
+      const code = typeof call.args.code === 'string' ? call.args.code : typeof call.args.source === 'string' ? call.args.source : null
+      this.event({ type: 'approval', ...base, callId: call.id, preview: { kind: 'mcp', server: t.serverLabel, tool: t.tool, args: code ?? JSON.stringify(call.args, null, 2) } })
+      const decision = await new Promise<'allow' | 'deny' | 'allow-all'>((resolve) => run.approvals.set(call.id, resolve))
+      if (decision === 'deny') {
+        this.event({ type: 'tool-status', ...base, callId: call.id, status: 'denied', summary: "Refusé par l'utilisateur" }, true)
+        return "L'utilisateur a refusé cette action. Ne la répète pas ; propose une alternative ou demande des précisions."
+      }
+    }
+    this.event({ type: 'tool-status', ...base, callId: call.id, status: 'running' })
+    try {
+      const r = await this.mcp!.call(t.serverId, t.tool, call.args, run.controller.signal)
+      const out = r.text.length > 20_000 ? `${r.text.slice(0, 20_000)}\n… (tronqué)` : r.text
+      this.event({ type: 'tool-status', ...base, callId: call.id, status: r.ok ? 'done' : 'error', summary: r.ok ? `${t.tool} terminé` : `${t.tool} : erreur`, output: out.slice(0, 4000) }, true)
+      logActivity(this.db, 'mcp.call', `${t.serverLabel} : ${t.tool}`)
+      return r.ok ? out : `Erreur renvoyée par ${t.serverLabel} : ${out}`
+    } catch (e) {
+      const msg = (e as Error).message
+      this.event({ type: 'tool-status', ...base, callId: call.id, status: 'error', summary: msg.slice(0, 200) }, true)
+      return `Erreur : ${msg}`
     }
   }
 

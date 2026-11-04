@@ -120,6 +120,24 @@ export interface Mesh3DJob {
   prompt?: string
 }
 
+export interface McpToolView {
+  name: string
+  description: string
+  readOnly: boolean
+}
+export interface McpServerView {
+  id: string
+  label: string
+  command: string
+  enabled: boolean
+  preset?: 'roblox'
+  status: 'off' | 'connecting' | 'connected' | 'error'
+  error?: string
+  /** Préréglage : le serveur a été trouvé sur ce PC. */
+  detected?: boolean
+  tools: McpToolView[]
+}
+
 export type Local3DEngineId = 'triposr' | 'triposg'
 export interface Local3DEngineStatus {
   id: Local3DEngineId
@@ -246,6 +264,12 @@ export interface AiStudioApi {
     list(): Promise<GenerationRecord[]>
     remove(id: string): Promise<void>
     pickInput(): Promise<string | null>
+  }
+  mcp: {
+    list(): Promise<McpServerView[]>
+    setEnabled(id: string, enabled: boolean): Promise<Result<true>>
+    add(input: { label: string; command: string; args: string[] }): Promise<Result<true>>
+    remove(id: string): Promise<void>
   }
   local3d: {
     status(): Promise<Local3DStatus>

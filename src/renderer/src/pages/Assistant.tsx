@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ChatEvent, CommandPreview, ConversationDetail, FilePreview, StoredAgentEvent, ToolCallView } from '@shared/chat'
+import type { ChatEvent, CommandPreview, ConversationDetail, FilePreview, McpPreview, StoredAgentEvent, ToolCallView } from '@shared/chat'
 import { DiffView } from '../components/DiffView'
 import { Markdown } from '../components/Markdown'
 import { ModelPicker, describeRef } from '../components/ModelPicker'
@@ -52,7 +52,7 @@ interface Live {
   status: string
   calls: Record<string, LiveCall>
   order: string[]
-  approvals: Record<string, FilePreview | CommandPreview>
+  approvals: Record<string, FilePreview | CommandPreview | McpPreview>
   usage?: { tokensPerSecond?: number }
 }
 
@@ -456,14 +456,16 @@ function ToolRow({ call }: { call: LiveCall }) {
   )
 }
 
-function ApprovalCard({ preview, call, onDecide }: { preview: FilePreview | CommandPreview; call?: ToolCallView; onDecide: (d: 'allow' | 'deny' | 'allow-all') => void }) {
+function ApprovalCard({ preview, call, onDecide }: { preview: FilePreview | CommandPreview | McpPreview; call?: ToolCallView; onDecide: (d: 'allow' | 'deny' | 'allow-all') => void }) {
   const [busy, setBusy] = useState(false)
   const decide = (d: 'allow' | 'deny' | 'allow-all') => {
     setBusy(true)
     onDecide(d)
   }
   const title =
-    preview.kind === 'command'
+    preview.kind === 'mcp'
+      ? `${preview.server} : autoriser « ${preview.tool} » ?`
+      : preview.kind === 'command'
       ? 'Exécuter cette commande ?'
       : preview.action === 'create'
         ? `Créer ${preview.path} ?`
@@ -480,12 +482,16 @@ function ApprovalCard({ preview, call, onDecide }: { preview: FilePreview | Comm
       className="mt-3 ml-10 overflow-hidden rounded-xl border border-warn/40 bg-warn/[0.04]"
     >
       <div className="flex items-center gap-2 border-b border-warn/20 px-4 py-2.5">
-        {preview.kind === 'command' ? <Terminal className="size-4 text-warn" /> : <FileEdit className="size-4 text-warn" />}
+        {preview.kind === 'command' || preview.kind === 'mcp' ? <Terminal className="size-4 text-warn" /> : <FileEdit className="size-4 text-warn" />}
         <span className="text-[13px] font-medium">{title}</span>
         {call && <span className="ml-auto text-[11px] text-fg-subtle">{call.label}</span>}
       </div>
       <div className="p-3">
-        {preview.kind === 'command' ? (
+        {preview.kind === 'mcp' ? (
+          <pre className="max-h-[300px] overflow-auto rounded-lg bg-bg px-3 py-2 font-mono text-[12.5px] whitespace-pre-wrap" data-selectable>
+            {preview.args}
+          </pre>
+        ) : preview.kind === 'command' ? (
           <pre className="rounded-lg bg-bg px-3 py-2 font-mono text-[12.5px] whitespace-pre-wrap" data-selectable>
             {preview.command}
           </pre>

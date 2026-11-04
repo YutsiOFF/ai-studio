@@ -85,6 +85,7 @@ const api: AiStudioApi = {
     remove: inv('images:remove') as never,
     pickInput: inv('images:pick-input') as never
   },
+  mcp: { list: inv('mcp:list') as never, setEnabled: inv('mcp:set-enabled') as never, add: inv('mcp:add') as never, remove: inv('mcp:remove') as never },
   local3d: { status: inv('local3d:status') as never, install: inv('local3d:install') as never, remove: inv('local3d:remove') as never },
   mesh: {
     spaceStatus: inv('mesh:space-status') as never,

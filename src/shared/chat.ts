@@ -37,6 +37,8 @@ export interface StoredMessage {
 
 export type FilePreview = { kind: 'file'; path: string; action: 'create' | 'modify' | 'delete' | 'move'; before: string | null; after: string | null; to?: string }
 export type CommandPreview = { kind: 'command'; command: string; cwd: string }
+/** Appel d'outil d'une application connectée par MCP (ex. Roblox Studio). */
+export type McpPreview = { kind: 'mcp'; server: string; tool: string; args: string }
 
 export interface ToolCallView {
   id: string
@@ -53,7 +55,7 @@ export type ChatEvent =
   | { type: 'text'; conversationId: string; runId: string; text: string }
   | { type: 'reasoning'; conversationId: string; runId: string; text: string }
   | { type: 'tool-call'; conversationId: string; runId: string; call: ToolCallView }
-  | { type: 'approval'; conversationId: string; runId: string; callId: string; preview: FilePreview | CommandPreview }
+  | { type: 'approval'; conversationId: string; runId: string; callId: string; preview: FilePreview | CommandPreview | McpPreview }
   | { type: 'tool-status'; conversationId: string; runId: string; callId: string; status: 'running' | 'done' | 'error' | 'denied'; summary?: string; output?: string }
   | { type: 'tool-output'; conversationId: string; runId: string; callId: string; chunk: string }
   | { type: 'usage'; conversationId: string; runId: string; tokensPerSecond?: number; outputTokens?: number }

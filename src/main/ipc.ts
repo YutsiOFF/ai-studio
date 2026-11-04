@@ -18,6 +18,7 @@ import { deleteGeneration, listGenerations, type ImageEngine } from './images'
 import { openRouterLogin } from './oauth'
 import { allSpaceStatus, generateCloud3D, gpuQuota, importMesh } from './mesh3d'
 import type { Local3D } from './local3d'
+import type { McpManager } from './mcp'
 import type { LocalModels } from './models'
 import { createProject, getProject, listProjects, removeProject, updateProject } from './projects'
 import { readSettings, writeSettings } from './settings'
@@ -37,6 +38,7 @@ export interface Services {
   chat: ChatService
   images: ImageEngine
   local3d: Local3D
+  mcp: McpManager
 }
 
 async function wrap<T>(fn: () => Promise<T> | T): Promise<{ ok: true; value: T } | { ok: false; error: string }> {
@@ -284,6 +286,16 @@ export function registerIpc(s: Services): void {
       return generateCloud3D(db, s.outputDir, { ...j, hfToken: s.cloud.hfToken() }, readSettings(db).allowRestrictedLicenses)
     })
   )
+  h('mcp:list', () => s.mcp.list())
+  h('mcp:set-enabled', (id: unknown, enabled: unknown) => wrap(async () => (await s.mcp.setEnabled(str.parse(id), enabled === true), true as const)))
+  h('mcp:add', (input: unknown) =>
+    wrap(() => {
+      const i = z.object({ label: z.string().trim().min(1).max(60), command: z.string().trim().min(1).max(1000), args: z.array(z.string().max(1000)).max(50) }).parse(input)
+      s.mcp.add(i)
+      return true as const
+    })
+  )
+  h('mcp:remove', (id: unknown) => s.mcp.remove(str.parse(id)))
   h('mesh:list', () => listGenerations(db, 'mesh3d'))
   h('local3d:status', () => s.local3d.status())
   const localEngine = z.enum(['triposr', 'triposg'])
