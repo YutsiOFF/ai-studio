@@ -16,6 +16,7 @@ import { cancelTask, listTasks } from './events'
 import { getHardware, getUsage } from './hardware'
 import { deleteGeneration, listGenerations, type ImageEngine } from './images'
 import { allSpaceStatus, generateCloud3D, importMesh } from './mesh3d'
+import type { Local3D } from './local3d'
 import type { LocalModels } from './models'
 import { createProject, getProject, listProjects, removeProject, updateProject } from './projects'
 import { readSettings, writeSettings } from './settings'
@@ -34,6 +35,7 @@ export interface Services {
   cloud: CloudProviders
   chat: ChatService
   images: ImageEngine
+  local3d: Local3D
 }
 
 async function wrap<T>(fn: () => Promise<T> | T): Promise<{ ok: true; value: T } | { ok: false; error: string }> {
@@ -253,8 +255,8 @@ export function registerIpc(s: Services): void {
     wrap(() => {
       const j = z
         .object({
-          engine: z.enum(['trellis', 'trellis2', 'partcrafter', 'triposg', 'step1x', 'hunyuan21', 'instantmesh', 'hi3dgen']),
-          imagePath: str,
+          engine: z.enum(['triposr-local', 'trellis', 'trellis2', 'trellis2-text', 'shap-e', 'partcrafter', 'triposg', 'step1x', 'hunyuan21', 'instantmesh', 'hi3dgen']),
+          imagePath: str.optional(),
           seed: z.number().int().min(0).max(2 ** 31),
           quality: z.enum(['fast', 'balanced', 'high']),
           textured: z.boolean(),
@@ -264,11 +266,18 @@ export function registerIpc(s: Services): void {
           prompt: z.string().max(4000).optional()
         })
         .parse(job)
-      if (!isInside(dataPath, j.imagePath)) throw new Error('Image invalide.')
+      if (j.imagePath && !isInside(dataPath, j.imagePath)) throw new Error('Image invalide.')
+      if (j.engine === 'triposr-local') {
+        if (!j.imagePath) throw new Error('TripoSR a besoin d’une image de départ.')
+        return s.local3d.generate({ imagePath: j.imagePath, quality: j.quality, projectId: j.projectId, prompt: j.prompt })
+      }
       return generateCloud3D(db, s.outputDir, { ...j, hfToken: s.cloud.hfToken() }, readSettings(db).allowRestrictedLicenses)
     })
   )
   h('mesh:list', () => listGenerations(db, 'mesh3d'))
+  h('local3d:status', () => s.local3d.status())
+  h('local3d:install', () => wrap(async () => (await s.local3d.install(), true as const)))
+  h('local3d:remove', () => s.local3d.remove())
   h('mesh:import', async () => {
     const res = await dialog.showOpenDialog(dialogParent()!, { title: 'Importer un modèle 3D', properties: ['openFile'], filters: [{ name: 'Modèles 3D', extensions: ['glb', 'gltf', 'obj', 'stl', 'ply'] }] })
     if (res.canceled || !res.filePaths[0]) return null

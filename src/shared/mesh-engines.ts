@@ -20,9 +20,26 @@ export interface MeshEngineInfo {
   gpuSeconds: string
   /** Restriction de licence : le moteur reste désactivé tant que l'utilisateur ne l'a pas accepté. */
   restricted?: string
+  /** Où tourne le calcul. */
+  location?: 'cloud' | 'local'
+  /** Entrée attendue : image, texte, ou l'un des deux. */
+  input?: 'image' | 'text' | 'both'
 }
 
 export const MESH_ENGINES: MeshEngineInfo[] = [
+  {
+    id: 'triposr-local',
+    label: 'TripoSR (local)',
+    publisher: 'Stability AI × Tripo',
+    space: 'stabilityai/TripoSR',
+    license: 'MIT',
+    description: 'Tourne entièrement sur ton PC, sans quota ni Internet après installation. Couleurs par sommet. Rapide sur NVIDIA, possible sur processeur.',
+    output: 'textured',
+    options: {},
+    gpuSeconds: 'illimité (ton PC)',
+    location: 'local',
+    input: 'image'
+  },
   {
     id: 'trellis2',
     label: 'TRELLIS.2',
@@ -77,6 +94,30 @@ export const MESH_ENGINES: MeshEngineInfo[] = [
     output: 'geometry',
     options: { texture: true },
     gpuSeconds: '120–300 s'
+  },
+  {
+    id: 'trellis2-text',
+    label: 'TRELLIS.2 Texte',
+    publisher: 'Microsoft (Space prithivMLmods)',
+    space: 'prithivMLmods/TRELLIS.2-Text-to-3D',
+    license: 'MIT (TRELLIS.2)',
+    description: 'Texte → 3D direct : le Space crée l’image puis le modèle TRELLIS.2 texturé.',
+    output: 'textured',
+    options: { textureSize: true },
+    gpuSeconds: '90–240 s',
+    input: 'text'
+  },
+  {
+    id: 'shap-e',
+    label: 'Shap-E',
+    publisher: 'OpenAI',
+    space: 'hysts/Shap-E',
+    license: 'MIT',
+    description: 'Texte ou image → 3D, très rapide mais simple : idéal pour des brouillons de formes.',
+    output: 'textured',
+    options: {},
+    gpuSeconds: '10–30 s',
+    input: 'both'
   },
   {
     id: 'hunyuan21',

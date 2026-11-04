@@ -63,6 +63,27 @@ export const CLOUD_PROVIDERS: CloudProvider[] = [
     hosting: 'Variable selon le modèle', trainsOnFreeData: 'inconnu', notes: 'Accès à DeepSeek V4 Flash gratuitement.'
   },
   {
+    id: 'gonka', label: 'Gonka Broker', badge: 'free',
+    baseUrl: 'https://proxy.gonkabroker.com/v1', keyRequired: true,
+    signupUrl: 'https://gonkabroker.com/', freeFilter: 'all',
+    knownLimits: '~1 M tokens/mois gratuits (compte + vérification SMS). DeepSeek V4 Flash, MiniMax, GLM.', asOf: '2026-11-04',
+    hosting: 'Réseau décentralisé', trainsOnFreeData: 'inconnu', notes: 'Accès gratuit à DeepSeek V4 Flash.'
+  },
+  {
+    id: 'aion', label: 'Aion Labs', badge: 'free',
+    baseUrl: 'https://api.aionlabs.ai/v1', keyRequired: true,
+    signupUrl: 'https://www.aionlabs.ai/', freeFilter: 'all',
+    knownLimits: '15 req/min, 20 000 tokens/jour, sans carte bancaire.', asOf: '2026-11-04',
+    hosting: 'Inconnu', trainsOnFreeData: 'inconnu'
+  },
+  {
+    id: 'vercel', label: 'Vercel AI Gateway', badge: 'free',
+    baseUrl: 'https://ai-gateway.vercel.sh/v1', keyRequired: true,
+    signupUrl: 'https://vercel.com/ai-gateway', freeFilter: 'all',
+    knownLimits: '5 $ de crédits offerts tous les 30 jours avec un compte Vercel gratuit ; des centaines de modèles (DeepSeek, Qwen, Llama, Mistral…).', asOf: '2026-11-04',
+    hosting: 'Variable selon le modèle', trainsOnFreeData: 'non', notes: 'Crédits mensuels renouvelés : tant qu’ils durent, les modèles payants sont utilisables gratuitement.'
+  },
+  {
     id: 'gemini', label: 'Google Gemini (AI Studio)', badge: 'free',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', keyRequired: true,
     signupUrl: 'https://aistudio.google.com/apikey', freeFilter: 'all',

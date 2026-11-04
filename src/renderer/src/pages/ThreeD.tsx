@@ -3,6 +3,7 @@ import { Canvas, type ThreeEvent } from '@react-three/fiber'
 import {
   Box,
   Cloud,
+  Cpu,
   Download,
   Eye,
   EyeOff,
@@ -67,7 +68,7 @@ export function ThreeDPage() {
   const [textured, setTextured] = useState(true)
   const [numParts, setNumParts] = useState(4)
   const [texSize, setTexSize] = useState(1024)
-  const [forge, setForge] = useState<{ imageUrl: string; phase: ForgePhase; target: THREE.Object3D | null } | null>(null)
+  const [forge, setForge] = useState<{ imageUrl: string | null; phase: ForgePhase; target: THREE.Object3D | null } | null>(null)
   const settings = useAsync(() => api.settings.get())
   const [licenseFor, setLicenseFor] = useState<(typeof MESH_ENGINES)[number] | null>(null)
   const allowRestricted = settings.data?.allowRestrictedLicenses ?? false
@@ -75,6 +76,7 @@ export function ThreeDPage() {
   const [busy, setBusy] = useState(false)
   const [textBusy, setTextBusy] = useState(false)
   const space = useAsync(() => api.mesh.spaceStatus())
+  const local3d = useAsync(() => api.local3d.status())
   const library = useAsync(() => api.mesh.list())
   const imageStatus = useAsync(() => api.images.status())
   const hw = useAsync(() => api.hardware.get())
@@ -125,7 +127,7 @@ export function ThreeDPage() {
   // Phase visuelle des particules, d'après l'étape réelle remontée par le moteur.
   useEffect(() => {
     if (!forge || !meshTask?.stage || (forge.phase !== 'analyzing' && forge.phase !== 'generating')) return
-    const analyzing = /connexion|fond|isolation|recadrage|session/i.test(meshTask.stage)
+    const analyzing = /connexion|fond|isolation|recadrage|session|chargement|démarrage|préparation|image à partir/i.test(meshTask.stage)
     const next: ForgePhase = analyzing ? 'analyzing' : 'generating'
     if (next !== forge.phase) setForge({ ...forge, phase: next })
   }, [meshTask?.stage, forge])
@@ -136,16 +138,22 @@ export function ThreeDPage() {
     model?.setColorMode(colors)
   }, [model, colors])
 
+  const isLocal = engine.location === 'local'
+  const needsImage = engine.input !== 'text' && engine.input !== 'both'
+  const canGenerate = engine.input === 'text' ? Boolean(textPrompt.trim()) : engine.input === 'both' ? Boolean(source || textPrompt.trim()) : Boolean(source)
+  const engineDown = isLocal ? !local3d.data?.installed : space.data?.find((x) => x.engine === engine.id)?.available === false
+
   const generate = async () => {
-    if (!source) return
+    if (!canGenerate) return
+    const useImage = engine.input === 'text' ? null : source
     setBusy(true)
     setModel((old) => {
       old?.dispose()
       return null
     })
     setCurrent(null)
-    setForge({ imageUrl: api.app.mediaUrl(source), phase: 'analyzing', target: null })
-    const r = await api.mesh.generate({ engine: engine.id as Mesh3DJob['engine'], imagePath: source, seed, quality, textured, numParts, textureSize: texSize, prompt: textPrompt || undefined })
+    setForge({ imageUrl: useImage ? api.app.mediaUrl(useImage) : null, phase: 'analyzing', target: null })
+    const r = await api.mesh.generate({ engine: engine.id as Mesh3DJob['engine'], imagePath: useImage ?? undefined, seed, quality, textured, numParts, textureSize: texSize, prompt: textPrompt || undefined })
     setBusy(false)
     if (!r.ok) {
       setForge(null)
@@ -220,7 +228,49 @@ export function ThreeDPage() {
     refresh()
   }
 
-  const local3D = hw.data?.assessment.local3D
+  const localTask = useTaskStore((st) => st.tasks['engine:local3d'])
+  const renderEngine = (e: (typeof MESH_ENGINES)[number]) => {
+    const st = space.data?.find((x) => x.engine === e.id)
+    const on = e.id === engine.id
+    const local = e.location === 'local'
+    const ok = local ? local3d.data?.installed : st?.available
+    return (
+      <button
+        key={e.id}
+        onClick={() => {
+          if (e.restricted && !allowRestricted) {
+            setLicenseFor(e)
+            return
+          }
+          setEngineId(e.id as Mesh3DJob['engine'])
+          try {
+            localStorage.setItem('aistudio.mesh-engine', e.id)
+          } catch {
+            /* indisponible */
+          }
+        }}
+        className={cn('w-full rounded-xl border px-3 py-2.5 text-left transition-colors', on ? 'border-accent/50 bg-accent/[0.06]' : 'border-line bg-surface hover:border-line-strong')}
+      >
+        <div className="flex items-center gap-2">
+          {local ? <Cpu className={cn('size-3.5 shrink-0', on ? 'text-accent' : 'text-local')} /> : <Cloud className={cn('size-3.5 shrink-0', on ? 'text-accent' : 'text-cloud')} />}
+          <span className="text-[13px] font-medium whitespace-nowrap">{e.label}</span>
+          <span className="truncate text-[11px] text-fg-subtle">{e.input === 'text' ? 'texte → 3D' : e.input === 'both' ? 'texte ou image' : e.publisher}</span>
+          <span className="flex-1" />
+          {e.restricted && <Badge tone="warn">{allowRestricted ? 'Licence UE' : 'Verrouillé'}</Badge>}
+          {local && !local3d.data?.installed && <Badge tone="neutral">À installer</Badge>}
+          <span
+            className={cn('size-2 shrink-0 rounded-full', (local ? local3d.data === undefined : st === undefined) ? 'bg-fg-subtle' : ok ? 'bg-accent' : local ? 'bg-fg-subtle' : 'bg-danger')}
+            title={local ? (local3d.data?.installed ? 'Installé' : 'Non installé') : st === undefined ? 'Vérification…' : st.available ? `Disponible${st.stage === 'SLEEPING' ? ' (en veille, démarrage ~1 min)' : ''}` : `Indisponible : ${st.error ?? st.stage}`}
+          />
+        </div>
+        {on && (
+          <p className="mt-1 text-[11.5px] leading-snug text-fg-muted">
+            {e.description} <span className="text-fg-subtle">Licence {e.license}{local ? '' : ` · ${e.gpuSeconds} de GPU`}.</span>
+          </p>
+        )}
+      </button>
+    )
+  }
 
   return (
     <div className="flex h-full">
@@ -229,56 +279,50 @@ export function ThreeDPage() {
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-[12px] font-semibold tracking-wide text-fg-subtle uppercase">Moteur 3D</span>
-              <Badge tone="cloud">Gratuit · sans clé</Badge>
+              <span className="text-[12px] font-semibold tracking-wide text-fg-subtle uppercase">Sur ton PC</span>
+              <Badge tone="local">Illimité · hors ligne</Badge>
             </div>
-            <div className="mt-2 space-y-1.5">
-              {MESH_ENGINES.map((e) => {
-                const st = space.data?.find((x) => x.engine === e.id)
-                const on = e.id === engine.id
-                return (
-                  <button
-                    key={e.id}
-                    onClick={() => {
-                      if (e.restricted && !allowRestricted) {
-                        setLicenseFor(e)
-                        return
-                      }
-                      setEngineId(e.id as Mesh3DJob['engine'])
-                      try {
-                        localStorage.setItem('aistudio.mesh-engine', e.id)
-                      } catch {
-                        /* indisponible */
-                      }
+            <div className="mt-2 space-y-1.5">{MESH_ENGINES.filter((e) => e.location === 'local').map(renderEngine)}</div>
+            {isLocal && local3d.data && !local3d.data.installed && (
+              <div className="mt-2 rounded-xl border border-line-strong bg-surface p-3">
+                <p className="text-[11.5px] text-fg-muted">
+                  Installation unique (≈ {String(Math.round(local3d.data.sizeEstimateMB / 100) / 10).replace('.', ',')} Go : Python isolé, PyTorch, poids TripoSR). {local3d.data.note}
+                </p>
+                {localTask?.state === 'running' ? (
+                  <div className="mt-2">
+                    <TaskProgress task={localTask} compact />
+                  </div>
+                ) : (
+                  <Button
+                    className="mt-2 w-full"
+                    variant="primary"
+                    icon={Download}
+                    onClick={async () => {
+                      const r = await api.local3d.install()
+                      if (!r.ok) toast.error(r.error)
+                      else toast.success('3D locale installée : génération illimitée sur ton PC.')
+                      void local3d.reload()
                     }}
-                    className={cn('w-full rounded-xl border px-3 py-2.5 text-left transition-colors', on ? 'border-accent/50 bg-accent/[0.06]' : 'border-line bg-surface hover:border-line-strong')}
                   >
-                    <div className="flex items-center gap-2">
-                      <Cloud className={cn('size-3.5', on ? 'text-accent' : 'text-cloud')} />
-                      <span className="text-[13px] font-medium whitespace-nowrap">{e.label}</span>
-                      <span className="truncate text-[11px] text-fg-subtle">{e.publisher}</span>
-                      <span className="flex-1" />
-                      {e.restricted && <Badge tone="warn">{allowRestricted ? 'Licence UE' : 'Verrouillé'}</Badge>}
-                      <span
-                        className={cn('size-2 shrink-0 rounded-full', st === undefined ? 'bg-fg-subtle' : st.available ? 'bg-accent' : 'bg-danger')}
-                        title={st === undefined ? 'Vérification…' : st.available ? `Disponible${st.stage === 'SLEEPING' ? ' (en veille, démarrage ~1 min)' : ''}` : `Indisponible : ${st.error ?? st.stage}`}
-                      />
-                    </div>
-                    {on && (
-                      <p className="mt-1 text-[11.5px] leading-snug text-fg-muted">
-                        {e.description} <span className="text-fg-subtle">Licence {e.license} · {e.gpuSeconds} de GPU.</span>
-                      </p>
-                    )}
-                  </button>
-                )
-              })}
+                    Installer la 3D locale
+                  </Button>
+                )}
+              </div>
+            )}
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-[12px] font-semibold tracking-wide text-fg-subtle uppercase">Cloud gratuit</span>
+              <Badge tone="cloud">Sans clé</Badge>
             </div>
+            <div className="mt-2 space-y-1.5">{MESH_ENGINES.filter((e) => e.location !== 'local').map(renderEngine)}</div>
             <p className="mt-2 text-[11px] leading-snug text-fg-subtle">
-              Quota GPU gratuit commun : ~2 min/jour sans compte, 5 min avec un jeton Hugging Face gratuit (Paramètres &gt; IA). 3D 100 % locale : pas encore disponible.
+              Quota GPU Cloud commun : ~2 min/jour sans compte, 5 min avec un jeton Hugging Face gratuit (Paramètres &gt; IA). La 3D locale n’a aucun quota.
             </p>
           </div>
 
-          <Field label="Image de départ">
+          {!needsImage && engine.input === 'text' && (
+            <p className="rounded-lg border border-cloud/25 bg-cloud/[0.05] px-3 py-2 text-[11.5px] text-fg-muted">Ce moteur génère directement à partir du texte ci-dessous.</p>
+          )}
+          <Field label={engine.input === 'text' ? 'Image de départ (non utilisée par ce moteur)' : engine.input === 'both' ? 'Image de départ (ou texte ci-dessous)' : 'Image de départ'}>
             {source ? (
               <div className="relative overflow-hidden rounded-xl border border-line-strong bg-[repeating-conic-gradient(#1a1d23_0%_25%,#14161b_0%_50%)] bg-[length:16px_16px]">
                 <img src={api.app.mediaUrl(source)} className="h-44 w-full object-contain" alt="" />
@@ -363,7 +407,7 @@ export function ThreeDPage() {
               </Button>
             </div>
           ) : (
-            <Button className="h-10 w-full" variant="primary" icon={Wand2} loading={busy} disabled={!source || space.data?.find((x) => x.engine === engineId)?.available === false} onClick={generate}>
+            <Button className="h-10 w-full" variant="primary" icon={Wand2} loading={busy} disabled={!canGenerate || engineDown} onClick={generate}>
               Générer le modèle 3D
             </Button>
           )}

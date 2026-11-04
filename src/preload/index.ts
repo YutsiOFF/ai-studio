@@ -84,6 +84,7 @@ const api: AiStudioApi = {
     remove: inv('images:remove') as never,
     pickInput: inv('images:pick-input') as never
   },
+  local3d: { status: inv('local3d:status') as never, install: inv('local3d:install') as never, remove: inv('local3d:remove') as never },
   mesh: {
     spaceStatus: inv('mesh:space-status') as never,
     generate: inv('mesh:generate') as never,

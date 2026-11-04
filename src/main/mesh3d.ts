@@ -17,7 +17,7 @@ import { USER_AGENT } from './net'
 
 export interface Mesh3DJob {
   engine: string
-  imagePath: string
+  imagePath?: string
   seed: number
   quality: MeshQuality
   textured: boolean
@@ -95,8 +95,8 @@ const Q = <T,>(q: MeshQuality, fast: T, balanced: T, high: T): T => (q === 'fast
 
 interface RunCtx {
   client: Client
-  image: Blob
-  handle: (b: Blob) => unknown
+  image: Blob | null
+  handle: (b: Blob | null) => unknown
   job: Mesh3DJob
   update: Update
   signal: AbortSignal
@@ -158,6 +158,34 @@ const RUNNERS: Record<string, (c: RunCtx) => Promise<{ glb: GradioFile; preview?
     return { glb: tex[0] as GradioFile }
   },
 
+  async 'trellis2-text'({ client, job, update, signal }) {
+    if (!job.prompt?.trim()) throw new Error('Ce moteur a besoin d’une description en texte.')
+    await client.predict('/start_session', []).catch(() => undefined)
+    const img = await call(client, '/generate_txt2img', [job.prompt], update, 'Création de l’image à partir du texte', signal)
+    const pre = await call(client, '/preprocess_image', [img[0]], update, 'Préparation de l’image', signal)
+    const steps = Q(job.quality, 8, 12, 20)
+    const out = await call(
+      client,
+      '/generate_3d',
+      [pre[0], job.seed, Q(job.quality, '512', '1024', '1536'), Q(job.quality, 100000, 150000, 300000), job.textureSize, 7.5, 0.7, steps, 5.0, 7.5, 0.5, steps, 3.0, 1.0, 0.0, steps, 3.0],
+      update,
+      'Génération du modèle TRELLIS.2',
+      signal
+    )
+    return { glb: (out[1] ?? out[0]) as GradioFile }
+  },
+
+  async 'shap-e'({ client, image, handle, job, update, signal }) {
+    const steps = Q(job.quality, 32, 64, 96)
+    if (image) {
+      const out = await call(client, '/image-to-3d', [handle(image), job.seed, 3.0, steps], update, 'Génération Shap-E depuis l’image', signal)
+      return { glb: out[0] as GradioFile }
+    }
+    if (!job.prompt?.trim()) throw new Error('Donne une image ou une description en texte.')
+    const out = await call(client, '/text-to-3d', [job.prompt, job.seed, 15.0, steps], update, 'Génération Shap-E depuis le texte', signal)
+    return { glb: out[0] as GradioFile }
+  },
+
   async hunyuan21({ client, image, handle, job, update, signal }) {
     const data = [handle(image), null, null, null, null, Q(job.quality, 10, 30, 50), 5.0, job.seed, Q(job.quality, 196, 256, 384), true, 8000, false]
     if (job.textured) {
@@ -207,10 +235,15 @@ export async function generateCloud3D(db: Db, outputDir: string, job: Mesh3DJob,
     })
     const base = (client.config?.root ?? '').replace(/\/$/, '')
     if (ctrl.signal.aborted) throw new Error('Annulé.')
-    const ext = extname(job.imagePath).toLowerCase()
-    const image = new Blob([readFileSync(job.imagePath)], { type: ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : 'image/png' })
+    const ext = job.imagePath ? extname(job.imagePath).toLowerCase() : ''
+    const image = job.imagePath ? new Blob([readFileSync(job.imagePath)], { type: ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : 'image/png' }) : null
+    if (!image && engine.input !== 'text' && engine.input !== 'both') throw new Error(`${engine.label} a besoin d’une image de départ.`)
 
-    const result = await runner({ client, image, handle: handle_file, job, update, signal: ctrl.signal })
+    const handle = (b: Blob | null) => {
+      if (!b) throw new Error(`${engine.label} a besoin d’une image de départ.`)
+      return handle_file(b)
+    }
+    const result = await runner({ client, image, handle, job, update, signal: ctrl.signal })
 
     update('Téléchargement du modèle 3D')
     const id = randomUUID()
@@ -228,9 +261,11 @@ export async function generateCloud3D(db: Db, outputDir: string, job: Mesh3DJob,
         /* aperçu facultatif */
       }
     }
-    const srcCopy = join(dir, `${id}-source${ext || '.png'}`)
-    copyFileSync(job.imagePath, srcCopy)
-    files.push(srcCopy)
+    if (job.imagePath) {
+      const srcCopy = join(dir, `${id}-source${ext || '.png'}`)
+      copyFileSync(job.imagePath, srcCopy)
+      files.push(srcCopy)
+    }
 
     const rec = saveGeneration(db, {
       id,

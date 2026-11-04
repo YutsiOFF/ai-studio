@@ -28,12 +28,12 @@ Les mises à jour suivantes s'installent ensuite automatiquement.
 | **Assistant** | Discussion en direct (Markdown, raisonnement, images jointes), modèles locaux et Cloud dans un même sélecteur |
 | **Agents sur projets** | Exploration, lecture, recherche, écriture, modification, déplacement, suppression (Corbeille), commandes. **Chaque modification et chaque commande est montrée (diff avant/après) et attend ta validation**. Timeline réelle en 9 étapes, annulation des modifications, arrêt immédiat, confinement au dossier du projet |
 | **Images** | stable-diffusion.cpp (CUDA / Vulkan / CPU) installé automatiquement ; Z-Image Turbo, SDXL, SD 1.5 ; texte → image, image de référence, variantes, formats, graine, historique |
-| **3D** | Image → 3D avec **8 moteurs gratuits sans clé** (TRELLIS, TRELLIS.2, PartCrafter en parties, TripoSG, Step1X-3D, InstantMesh, Hi3DGen, et Hunyuan3D-2.1 sur activation : licence excluant l'UE) via Hugging Face, sur tous les PC ; animation de particules qui prennent la forme du modèle ; texte → image → 3D ; visualiseur (rotation, zoom, lumière, filaire, textures) ; **segmentation** (pièces disjointes, sélection de régions par angle) ; masquer / supprimer / renommer / exporter chaque partie ; export GLB, OBJ, STL ; import GLB/OBJ/STL/PLY |
+| **3D** | Image → 3D avec **TripoSR 100 % local** (installation en un clic, sans quota, NVIDIA ou processeur) + **10 moteurs Cloud gratuits sans clé** (TRELLIS, TRELLIS.2, TRELLIS.2 Texte, Shap-E texte→3D, PartCrafter en parties, TripoSG, Step1X-3D, InstantMesh, Hi3DGen, et Hunyuan3D-2.1 sur activation : licence excluant l'UE) via Hugging Face, sur tous les PC ; animation de particules qui prennent la forme du modèle ; texte → image → 3D ; visualiseur (rotation, zoom, lumière, filaire, textures) ; **segmentation** (pièces disjointes, sélection de régions par angle) ; masquer / supprimer / renommer / exporter chaque partie ; export GLB, OBJ, STL ; import GLB/OBJ/STL/PLY |
 | **Historique, paramètres, mises à jour** | Journal local, ressources en direct, démarrage avec Windows, mises à jour automatiques |
 
 ### Limites connues (affichées dans l'application)
 
-- **3D locale** (TripoSR / TripoSG) : pas encore intégrée — ces modèles exigent la compilation de dépendances CUDA sous Windows. La 3D passe par le Cloud gratuit (quota ~2 min de GPU/jour sans compte, 5 min avec un compte Hugging Face gratuit).
+- **3D locale** : TripoSR uniquement pour l'instant (couleurs par sommet, pas de texture UV). Les autres moteurs passent par le Cloud gratuit (quota ~2 min de GPU/jour sans compte, 5 min avec un compte Hugging Face gratuit).
 - **Segmentation sémantique automatique** (nommer « lame », « garde »…) : non disponible librement en France (P3-SAM exclut l'UE). Le découpage est géométrique ; les parties se renomment à la main.
 - **Export FBX** : nécessite Blender, non intégré.
 - **Inpainting** : non intégré (prévu via ComfyUI).

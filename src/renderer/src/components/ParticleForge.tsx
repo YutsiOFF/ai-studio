@@ -106,6 +106,24 @@ async function samplesFromImage(url: string): Promise<{ pos: Float32Array; col: 
   return { pos, col }
 }
 
+/** Sans image (moteur texte → 3D) : un disque lumineux de particules qui servira de matière première. */
+function samplesFromText(): { pos: Float32Array; col: Float32Array } {
+  const pos = new Float32Array(N * 3)
+  const col = new Float32Array(N * 3)
+  for (let k = 0; k < N; k++) {
+    const a = Math.random() * Math.PI * 2
+    const r = Math.sqrt(Math.random()) * 1.1
+    pos[k * 3] = Math.cos(a) * r
+    pos[k * 3 + 1] = Math.sin(a) * r
+    pos[k * 3 + 2] = (Math.random() - 0.5) * 0.05
+    const t = Math.random()
+    col[k * 3] = 0.24 + t * 0.12
+    col[k * 3 + 1] = 0.72 + t * 0.2
+    col[k * 3 + 2] = 0.6 + t * 0.4
+  }
+  return { pos, col }
+}
+
 /** Points répartis sur la surface du modèle (proportionnellement à l'aire), couleur lue dans la texture. */
 function samplesFromModel(root: THREE.Object3D): { pos: Float32Array; col: Float32Array } {
   const meshes: THREE.Mesh[] = []
@@ -185,7 +203,7 @@ function samplesFromModel(root: THREE.Object3D): { pos: Float32Array; col: Float
 
 const ACCENT = new THREE.Color('#3ddc97')
 
-export function ParticleForge({ imageUrl, phase, target, onFormed, onFaded }: { imageUrl: string; phase: ForgePhase; target: THREE.Object3D | null; onFormed: () => void; onFaded: () => void }) {
+export function ParticleForge({ imageUrl, phase, target, onFormed, onFaded }: { imageUrl: string | null; phase: ForgePhase; target: THREE.Object3D | null; onFormed: () => void; onFaded: () => void }) {
   const geom = useMemo(() => {
     const g = new THREE.BufferGeometry()
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3).setUsage(THREE.DynamicDrawUsage))
@@ -231,7 +249,7 @@ export function ParticleForge({ imageUrl, phase, target, onFormed, onFaded }: { 
 
   useEffect(() => {
     let alive = true
-    void samplesFromImage(imageUrl)
+    void (imageUrl ? samplesFromImage(imageUrl) : Promise.resolve(samplesFromText()))
       .then((s) => {
         if (!alive) return
         st.current.img = s

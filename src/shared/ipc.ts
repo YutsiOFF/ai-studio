@@ -109,8 +109,8 @@ export interface ImageJob {
 }
 
 export interface Mesh3DJob {
-  engine: 'trellis' | 'trellis2' | 'partcrafter' | 'triposg' | 'step1x' | 'hunyuan21' | 'instantmesh' | 'hi3dgen'
-  imagePath: string
+  engine: 'triposr-local' | 'trellis' | 'trellis2' | 'trellis2-text' | 'shap-e' | 'partcrafter' | 'triposg' | 'step1x' | 'hunyuan21' | 'instantmesh' | 'hi3dgen'
+  imagePath?: string
   seed: number
   quality: 'fast' | 'balanced' | 'high'
   textured: boolean
@@ -217,6 +217,11 @@ export interface AiStudioApi {
     list(): Promise<GenerationRecord[]>
     remove(id: string): Promise<void>
     pickInput(): Promise<string | null>
+  }
+  local3d: {
+    status(): Promise<{ installed: boolean; device: 'cuda' | 'cpu'; sizeEstimateMB: number; note: string }>
+    install(): Promise<Result<true>>
+    remove(): Promise<void>
   }
   mesh: {
     spaceStatus(): Promise<SpaceStatus[]>

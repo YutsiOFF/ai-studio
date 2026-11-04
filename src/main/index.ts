@@ -9,6 +9,7 @@ import { logActivity, openDatabase, type Db } from './db'
 import { OllamaEngine } from './engines/ollama'
 import { getHardware } from './hardware'
 import { ImageEngine } from './images'
+import { Local3D } from './local3d'
 import { isInside, registerIpc } from './ipc'
 import { LocalModels } from './models'
 import { readSettings } from './settings'
@@ -101,7 +102,16 @@ function start(): void {
     () => models.unloadAll()
   )
 
-  registerIpc({ db, dataPath, outputDir, window: () => mainWindow, ollama, models, cloud, chat, images })
+  const local3d = new Local3D(
+    db,
+    join(dataPath, 'engines', 'py3d'),
+    join(dataPath, 'models', '3d', 'triposr'),
+    outputDir,
+    async () => (await getHardware(dataPath)).assessment.accelerator,
+    () => models.unloadAll()
+  )
+
+  registerIpc({ db, dataPath, outputDir, window: () => mainWindow, ollama, models, cloud, chat, images, local3d })
   mainWindow = createWindow()
   mainWindow.on('closed', () => {
     mainWindow = null

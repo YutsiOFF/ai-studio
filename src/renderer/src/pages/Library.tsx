@@ -384,12 +384,11 @@ function ThreeDLibrary({ local3D }: { local3D: boolean }) {
   const status = useAsync(() => api.mesh.spaceStatus())
   const extra = [
     { name: 'Segmentation géométrique', where: 'Local (tous les PC)', license: 'MIT (AI Studio)', status: 'Disponible', tone: 'accent' as const, text: 'Découpage en pièces séparées et sélection de régions par angle, directement dans le visualiseur.' },
-    { name: 'TripoSR / TripoSG en local', where: 'Local (NVIDIA 6 Go+)', license: 'MIT', status: local3D ? 'En préparation' : 'Incompatible avec ce PC', tone: 'warn' as const, text: 'Exigent la compilation de dépendances CUDA sous Windows : pas encore intégrés en local.' },
   ]
   return (
     <div className="space-y-3">
       <Card className="px-5 py-4 text-[13px] text-fg-muted">
-        Les moteurs 3D tournent gratuitement sur les GPU de Hugging Face, <span className="text-fg">sans clé ni compte</span>. Le quota GPU gratuit est commun à tous les moteurs : ~2 min par jour sans compte, 5 min avec un compte Hugging Face gratuit.
+        <span className="text-fg">TripoSR</span> tourne entièrement sur ton PC ({local3D ? 'accéléré par ta carte NVIDIA' : 'sur le processeur, plus lentement'}), sans quota. Les autres moteurs tournent gratuitement sur les GPU de Hugging Face, <span className="text-fg">sans clé ni compte</span>, avec un quota commun : ~2 min par jour sans compte, 5 min avec un compte Hugging Face gratuit.
       </Card>
       <Card>
         <ul className="divide-y divide-line">
@@ -401,18 +400,24 @@ function ThreeDLibrary({ local3D }: { local3D: boolean }) {
                   <div className="flex items-center gap-2">
                     <span className="text-[14px] font-semibold">{e.label}</span>
                     <span className="text-[12px] text-fg-subtle">{e.publisher}</span>
-                    <Badge tone="cloud">Cloud gratuit</Badge>
+                    {e.location === 'local' ? <Badge tone="local">Local</Badge> : <Badge tone="cloud">Cloud gratuit</Badge>}
+                    {e.input === 'text' && <Badge tone="neutral">Texte → 3D</Badge>}
+                    {e.input === 'both' && <Badge tone="neutral">Texte ou image</Badge>}
                     <Badge tone="neutral">{e.output === 'parts' ? 'En parties' : e.output === 'textured' ? 'Texturé' : e.options.texture ? 'Géométrie (+ texture)' : 'Géométrie'}</Badge>
                     {e.restricted && <Badge tone="warn">Licence excluant l’UE</Badge>}
                   </div>
                   <p className="mt-1 text-[13px] text-fg-muted">{e.description}</p>
                   <p className="mt-1 text-[11.5px] text-fg-subtle">
-                    Space {e.space} · Licence {e.license} · {e.gpuSeconds} de GPU par génération
+                    {e.location === 'local' ? `Poids ${e.space} · Licence ${e.license} · installation depuis la page Génération 3D` : `Space ${e.space} · Licence ${e.license} · ${e.gpuSeconds} de GPU par génération`}
                   </p>
                 </div>
-                <Badge tone={st === undefined ? 'neutral' : st.available ? 'accent' : 'danger'}>
-                  {st === undefined ? 'Vérification…' : st.available ? (st.stage === 'SLEEPING' ? 'En veille' : 'Disponible') : 'Indisponible'}
-                </Badge>
+                {e.location === 'local' ? (
+                  <Badge tone="accent">Sur ton PC</Badge>
+                ) : (
+                  <Badge tone={st === undefined ? 'neutral' : st.available ? 'accent' : 'danger'}>
+                    {st === undefined ? 'Vérification…' : st.available ? (st.stage === 'SLEEPING' ? 'En veille' : 'Disponible') : 'Indisponible'}
+                  </Badge>
+                )}
               </li>
             )
           })}
