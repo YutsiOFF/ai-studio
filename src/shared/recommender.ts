@@ -125,7 +125,9 @@ export function recommendLlms(catalog: Catalog, hw: HardwareInfo): Recommendatio
       if (q === undefined) continue
       if (use === 'vision' && !m.capabilities.includes('vision')) continue
       const a = assessLlm(m, hw)
-      let score = q * FIT_FACTOR[a.fit]
+      // Un mode hybride encore fluide (≥ 12 tokens/s) reste un très bon choix.
+      const factor = a.fit === 'hybrid' && a.tokensPerSecond >= 12 ? 0.85 : FIT_FACTOR[a.fit]
+      let score = q * factor
       if (use === 'code' && m.capabilities.includes('tools')) score += 0.5
       if (score > 0 && (!best || score > best.score)) best = { m, a, score }
     }

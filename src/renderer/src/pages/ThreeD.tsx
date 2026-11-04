@@ -20,7 +20,10 @@ import {
   Wand2
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { GenerationRecord } from '@shared/ipc'
+import type { GenerationRecord, Mesh3DJob } from '@shared/ipc'
+import { MESH_ENGINES, type MeshQuality } from '@shared/mesh-engines'
+import type * as THREE from 'three'
+import { ParticleForge, type ForgePhase } from '../components/ParticleForge'
 import { ErrorBoundary, webglAvailable } from '../components/ErrorBoundary'
 import { Modal } from '../components/Modal'
 import { TaskProgress } from '../components/Tasks'
@@ -53,9 +56,19 @@ export function ThreeDPage() {
   })
   const [textPrompt, setTextPrompt] = useState('')
   const [seed, setSeed] = useState(0)
-  const [steps, setSteps] = useState(12)
-  const [simplify, setSimplify] = useState(0.95)
+  const [engineId, setEngineId] = useState<Mesh3DJob['engine']>(() => {
+    try {
+      return (localStorage.getItem('aistudio.mesh-engine') as Mesh3DJob['engine']) || 'trellis'
+    } catch {
+      return 'trellis'
+    }
+  })
+  const [quality, setQuality] = useState<MeshQuality>('balanced')
+  const [textured, setTextured] = useState(true)
+  const [numParts, setNumParts] = useState(4)
   const [texSize, setTexSize] = useState(1024)
+  const [forge, setForge] = useState<{ imageUrl: string; phase: ForgePhase; target: THREE.Object3D | null } | null>(null)
+  const engine = MESH_ENGINES.find((e) => e.id === engineId) ?? MESH_ENGINES[0]!
   const [busy, setBusy] = useState(false)
   const [textBusy, setTextBusy] = useState(false)
   const space = useAsync(() => api.mesh.spaceStatus())
@@ -104,8 +117,15 @@ export function ThreeDPage() {
   }, [])
 
   useEffect(() => {
-    if (!current && library.data?.[0]) void open(library.data[0])
-  }, [library.data, current, open])
+    if (!current && !forge && library.data?.[0]) void open(library.data[0])
+  }, [library.data, current, open, forge])
+  // Phase visuelle des particules, d'après l'étape réelle remontée par le moteur.
+  useEffect(() => {
+    if (!forge || !meshTask?.stage || (forge.phase !== 'analyzing' && forge.phase !== 'generating')) return
+    const analyzing = /connexion|fond|isolation|recadrage|session/i.test(meshTask.stage)
+    const next: ForgePhase = analyzing ? 'analyzing' : 'generating'
+    if (next !== forge.phase) setForge({ ...forge, phase: next })
+  }, [meshTask?.stage, forge])
   useEffect(() => {
     model?.setWireframe(wire)
   }, [model, wire])
@@ -116,12 +136,36 @@ export function ThreeDPage() {
   const generate = async () => {
     if (!source) return
     setBusy(true)
-    const r = await api.mesh.generate({ imagePath: source, seed, ssSteps: steps, slatSteps: steps, ssGuidance: 7.5, slatGuidance: 3, meshSimplify: simplify, textureSize: texSize, prompt: textPrompt || undefined })
+    setModel((old) => {
+      old?.dispose()
+      return null
+    })
+    setCurrent(null)
+    setForge({ imageUrl: api.app.mediaUrl(source), phase: 'analyzing', target: null })
+    const r = await api.mesh.generate({ engine: engineId, imagePath: source, seed, quality, textured, numParts, textureSize: texSize, prompt: textPrompt || undefined })
     setBusy(false)
-    if (!r.ok) return toast.error(r.error)
-    toast.success('Modèle 3D généré.')
-    await library.reload()
-    void open(r.value)
+    if (!r.ok) {
+      setForge(null)
+      return toast.error(r.error)
+    }
+    void library.reload()
+    const f = meshFile(r.value)
+    if (!f) {
+      setForge(null)
+      return toast.error('Aucun fichier 3D reçu.')
+    }
+    try {
+      const m = await SceneModel.load(api.app.mediaUrl(f), extOf(f))
+      m.root.visible = false
+      setCurrent(r.value)
+      setModel(m)
+      setTextures(null)
+      setColors(engine.output === 'parts' && m.parts.length > 1)
+      setForge((cur) => (cur ? { ...cur, phase: 'forming', target: m.root } : null))
+    } catch (e) {
+      setForge(null)
+      toast.error(`Chargement impossible : ${(e as Error).message}`)
+    }
   }
 
   const textToImage = async () => {
@@ -181,30 +225,48 @@ export function ThreeDPage() {
       <aside className="flex w-[320px] shrink-0 flex-col border-r border-line">
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           <div>
-            <div className="text-[12px] font-semibold tracking-wide text-fg-subtle uppercase">Moteur</div>
-            <div className="mt-2 rounded-xl border border-line-strong bg-surface p-3">
-              <div className="flex items-center gap-2">
-                <Cloud className="size-4 text-cloud" />
-                <span className="text-[13px] font-medium whitespace-nowrap">TRELLIS</span>
-                <span className="text-[11.5px] text-fg-subtle">Microsoft</span>
-                <span className="flex-1" />
-                <Badge tone="cloud">Cloud gratuit</Badge>
-              </div>
-              <p className="mt-1.5 text-[11.5px] text-fg-muted">
-                Space Hugging Face public (MIT). ~2 min de GPU/jour sans compte, 5 min avec un jeton Hugging Face gratuit (Paramètres &gt; IA).
-              </p>
-              <div className="mt-2 text-[11.5px]">
-                {space.loading ? (
-                  <span className="text-fg-subtle">Vérification du service…</span>
-                ) : space.data?.available ? (
-                  <span className="text-accent">Disponible{space.data.stage === 'SLEEPING' ? ' (en veille, démarrage ~1 min)' : ''}</span>
-                ) : (
-                  <span className="text-danger">Indisponible : {space.data?.error ?? space.data?.stage}</span>
-                )}
-              </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] font-semibold tracking-wide text-fg-subtle uppercase">Moteur 3D</span>
+              <Badge tone="cloud">Gratuit · sans clé</Badge>
             </div>
-            <p className="mt-2 text-[11.5px] text-fg-subtle">
-              3D locale (TripoSR / TripoSG) : {local3D ? 'en préparation pour ta carte NVIDIA.' : 'nécessite une carte NVIDIA de 6 Go ou plus.'}
+            <div className="mt-2 space-y-1.5">
+              {MESH_ENGINES.map((e) => {
+                const st = space.data?.find((x) => x.engine === e.id)
+                const on = e.id === engineId
+                return (
+                  <button
+                    key={e.id}
+                    onClick={() => {
+                      setEngineId(e.id as Mesh3DJob['engine'])
+                      try {
+                        localStorage.setItem('aistudio.mesh-engine', e.id)
+                      } catch {
+                        /* indisponible */
+                      }
+                    }}
+                    className={cn('w-full rounded-xl border px-3 py-2.5 text-left transition-colors', on ? 'border-accent/50 bg-accent/[0.06]' : 'border-line bg-surface hover:border-line-strong')}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Cloud className={cn('size-3.5', on ? 'text-accent' : 'text-cloud')} />
+                      <span className="text-[13px] font-medium">{e.label}</span>
+                      <span className="truncate text-[11px] text-fg-subtle">{e.publisher}</span>
+                      <span className="flex-1" />
+                      <span
+                        className={cn('size-2 shrink-0 rounded-full', st === undefined ? 'bg-fg-subtle' : st.available ? 'bg-accent' : 'bg-danger')}
+                        title={st === undefined ? 'Vérification…' : st.available ? `Disponible${st.stage === 'SLEEPING' ? ' (en veille, démarrage ~1 min)' : ''}` : `Indisponible : ${st.error ?? st.stage}`}
+                      />
+                    </div>
+                    {on && (
+                      <p className="mt-1 text-[11.5px] leading-snug text-fg-muted">
+                        {e.description} <span className="text-fg-subtle">Licence {e.license} · {e.gpuSeconds} de GPU.</span>
+                      </p>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="mt-2 text-[11px] leading-snug text-fg-subtle">
+              Quota GPU gratuit commun : ~2 min/jour sans compte, 5 min avec un jeton Hugging Face gratuit (Paramètres &gt; IA). 3D 100 % locale : pas encore disponible.
             </p>
           </div>
 
@@ -235,22 +297,49 @@ export function ThreeDPage() {
             )}
           </Field>
 
+          <Field label="Qualité">
+            <div className="grid grid-cols-3 gap-1.5">
+              {(
+                [
+                  ['fast', 'Rapide'],
+                  ['balanced', 'Équilibrée'],
+                  ['high', 'Maximale']
+                ] as const
+              ).map(([q, l]) => (
+                <button
+                  key={q}
+                  onClick={() => setQuality(q)}
+                  className={cn('rounded-lg border py-1.5 text-[12px]', quality === q ? 'border-accent/50 bg-accent-soft text-accent' : 'border-line-strong text-fg-muted hover:text-fg')}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+            <span className="mt-1 block text-[11px] text-fg-subtle">Plus la qualité est haute, plus la génération consomme de quota GPU.</span>
+          </Field>
+          {engine.options.parts && (
+            <Field label={`Nombre de parties : ${numParts}`}>
+              <input type="range" min={2} max={16} value={numParts} onChange={(e) => setNumParts(Number(e.target.value))} className="w-full accent-[var(--color-accent)]" />
+            </Field>
+          )}
+          {engine.options.texture && (
+            <div className="flex items-center justify-between">
+              <span className="text-[12.5px] text-fg-muted">Générer la texture</span>
+              <Toggle label="Texture" checked={textured} onChange={setTextured} />
+            </div>
+          )}
           <details className="group rounded-xl border border-line bg-surface">
             <summary className="cursor-pointer px-3 py-2.5 text-[12.5px] font-medium text-fg-muted">Paramètres avancés</summary>
             <div className="space-y-3 border-t border-line p-3">
-              <Field label={`Étapes d’échantillonnage : ${steps}`}>
-                <input type="range" min={4} max={30} value={steps} onChange={(e) => setSteps(Number(e.target.value))} className="w-full accent-[var(--color-accent)]" />
-              </Field>
-              <Field label={`Simplification : ${simplify}`}>
-                <input type="range" min={0.9} max={0.98} step={0.01} value={simplify} onChange={(e) => setSimplify(Number(e.target.value))} className="w-full accent-[var(--color-accent)]" />
-              </Field>
-              <Field label="Taille des textures">
-                <select className={inputClass} value={texSize} onChange={(e) => setTexSize(Number(e.target.value))}>
-                  {[512, 1024, 2048].map((n) => (
-                    <option key={n}>{n}</option>
-                  ))}
-                </select>
-              </Field>
+              {engine.options.textureSize && (
+                <Field label="Taille des textures">
+                  <select className={inputClass} value={texSize} onChange={(e) => setTexSize(Number(e.target.value))}>
+                    {(engineId === 'trellis2' ? [1024, 2048, 4096] : [512, 1024, 2048]).map((n) => (
+                      <option key={n}>{n}</option>
+                    ))}
+                  </select>
+                </Field>
+              )}
               <Field label="Graine">
                 <input className={`${inputClass} font-mono`} value={seed} onChange={(e) => setSeed(Math.max(0, Number(e.target.value) || 0))} />
               </Field>
@@ -266,7 +355,7 @@ export function ThreeDPage() {
               </Button>
             </div>
           ) : (
-            <Button className="h-10 w-full" variant="primary" icon={Wand2} loading={busy} disabled={!source || space.data?.available === false} onClick={generate}>
+            <Button className="h-10 w-full" variant="primary" icon={Wand2} loading={busy} disabled={!source || space.data?.find((x) => x.engine === engineId)?.available === false} onClick={generate}>
               Générer le modèle 3D
             </Button>
           )}
@@ -276,7 +365,7 @@ export function ThreeDPage() {
       {/* Visualiseur */}
       <section className="flex min-w-0 flex-1 flex-col">
         <div className="relative flex-1 bg-[radial-gradient(ellipse_at_center,_#181b21_0%,_#0c0d10_75%)]">
-          {model && !webglAvailable() ? (
+          {(model || forge) && !webglAvailable() ? (
             <div className="grid h-full place-items-center p-8 text-center">
               <div className="max-w-sm">
                 <Box className="mx-auto size-8 text-warn" />
@@ -284,16 +373,28 @@ export function ThreeDPage() {
                 <p className="mt-1 text-[12.5px] text-fg-muted">WebGL n’a pas pu démarrer sur ce PC. Mets à jour le pilote de ta carte graphique puis redémarre AI Studio. Les exports restent possibles.</p>
               </div>
             </div>
-          ) : model ? (
+          ) : model || forge ? (
             <ErrorBoundary resetKey={current?.id}>
             <Canvas camera={{ position: [2.6, 1.6, 2.6], fov: 40, near: 0.01, far: 100 }} gl={{ antialias: true, preserveDrawingBuffer: true }} dpr={[1, 2]}>
               <ambientLight intensity={0.35} />
               <hemisphereLight args={['#dfe7ff', '#1a1c22', 0.6 * light]} />
               <directionalLight position={[Math.cos((lightAngle * Math.PI) / 180) * 4, 4, Math.sin((lightAngle * Math.PI) / 180) * 4]} intensity={light} />
               <directionalLight position={[-3, 1.5, -3]} intensity={0.35 * light} color="#9fb8ff" />
-              <primitive object={model.root} onClick={onPick} />
+              {model && <primitive object={model.root} onClick={onPick} />}
+              {forge && (
+                <ParticleForge
+                  imageUrl={forge.imageUrl}
+                  phase={forge.phase}
+                  target={forge.target}
+                  onFormed={() => {
+                    if (model) model.root.visible = true
+                    setForge((cur) => (cur ? { ...cur, phase: 'fading' } : null))
+                  }}
+                  onFaded={() => setForge(null)}
+                />
+              )}
               <gridHelper args={[6, 24, '#2e323c', '#1d2027']} position={[0, -1.01, 0]} />
-              <OrbitControls makeDefault enableDamping dampingFactor={0.08} minDistance={0.5} maxDistance={12} />
+              <OrbitControls makeDefault enableDamping dampingFactor={0.08} minDistance={0.5} maxDistance={12} autoRotate={Boolean(forge)} autoRotateSpeed={1.2} />
             </Canvas>
             </ErrorBoundary>
           ) : (
@@ -308,7 +409,15 @@ export function ThreeDPage() {
               )}
             </div>
           )}
-          {model && (
+          {forge && (
+            <div className="pointer-events-none absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-2.5 rounded-full border border-line-strong bg-black/60 px-4 py-2 backdrop-blur">
+              <Loader2 className="size-4 animate-spin text-accent" />
+              <span className="shimmer-text text-[12.5px] font-medium">
+                {forge.phase === 'forming' || forge.phase === 'fading' ? 'Assemblage du modèle' : (meshTask?.stage ?? 'Préparation')}
+              </span>
+            </div>
+          )}
+          {model && !forge && (
             <div className="pointer-events-none absolute top-3 left-3 rounded-lg bg-black/50 px-2.5 py-1.5 font-mono text-[11px] text-fg-muted backdrop-blur">
               {model.stats.triangles.toLocaleString('fr-FR')} triangles · {model.parts.length} partie(s)
             </div>

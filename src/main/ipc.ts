@@ -15,7 +15,7 @@ import type { OllamaEngine } from './engines/ollama'
 import { cancelTask, listTasks } from './events'
 import { getHardware, getUsage } from './hardware'
 import { deleteGeneration, listGenerations, type ImageEngine } from './images'
-import { generateCloud3D, importMesh, spaceStatus } from './mesh3d'
+import { allSpaceStatus, generateCloud3D, importMesh } from './mesh3d'
 import type { LocalModels } from './models'
 import { createProject, getProject, listProjects, removeProject, updateProject } from './projects'
 import { readSettings, writeSettings } from './settings'
@@ -248,19 +248,18 @@ export function registerIpc(s: Services): void {
   })
 
   // ----- 3D -----
-  h('mesh:space-status', () => spaceStatus())
+  h('mesh:space-status', () => allSpaceStatus())
   h('mesh:generate', (job: unknown) =>
     wrap(() => {
       const j = z
         .object({
+          engine: z.enum(['trellis', 'trellis2', 'partcrafter', 'triposg', 'step1x']),
           imagePath: str,
           seed: z.number().int().min(0).max(2 ** 31),
-          ssSteps: z.number().int().min(1).max(50),
-          slatSteps: z.number().int().min(1).max(50),
-          ssGuidance: z.number().min(0).max(10),
-          slatGuidance: z.number().min(0).max(10),
-          meshSimplify: z.number().min(0.9).max(0.98),
-          textureSize: z.number().int().min(512).max(2048),
+          quality: z.enum(['fast', 'balanced', 'high']),
+          textured: z.boolean(),
+          numParts: z.number().int().min(1).max(16),
+          textureSize: z.number().int().min(512).max(4096),
           projectId: z.string().uuid().nullable().optional(),
           prompt: z.string().max(4000).optional()
         })

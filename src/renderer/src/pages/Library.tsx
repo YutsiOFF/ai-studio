@@ -2,6 +2,7 @@ import { Box, Check, Download, Eye, Gauge, Search, Sparkles, Trash2, Wrench } fr
 import { motion } from 'motion/react'
 import { useCallback, useMemo, useState } from 'react'
 import type { ImageEntry, LlmEntry, LlmUse } from '@shared/catalog'
+import { MESH_ENGINES } from '@shared/mesh-engines'
 import { assessImage, assessLlm, recommendImage, recommendLlms, type Fit } from '@shared/recommender'
 import { EngineCard } from '../components/EngineCard'
 import { TaskProgress } from '../components/Tasks'
@@ -380,33 +381,59 @@ function ImageCard(props: {
 }
 
 function ThreeDLibrary({ local3D }: { local3D: boolean }) {
-  const rows = [
-    { name: 'TRELLIS (Microsoft)', where: 'Cloud gratuit (Hugging Face)', license: 'MIT', status: 'Disponible', tone: 'accent' as const, text: 'Image → modèle 3D texturé (GLB). Quota gratuit : ~2 min de GPU/jour sans compte, 5 min avec un compte Hugging Face gratuit.' },
-    { name: 'TripoSR', where: 'Local (NVIDIA 6 Go+)', license: 'MIT', status: local3D ? 'En préparation' : 'Incompatible avec ce PC', tone: 'warn' as const, text: 'Nécessite la compilation de dépendances CUDA sous Windows : intégration prévue dans une prochaine version.' },
-    { name: 'TripoSG', where: 'Local (NVIDIA 8 Go+)', license: 'MIT', status: local3D ? 'En préparation' : 'Incompatible avec ce PC', tone: 'warn' as const, text: 'Géométrie très précise, sans texture. Même contrainte d’installation que TripoSR.' },
-    { name: 'Segmentation géométrique', where: 'Local (tous les PC)', license: '—', status: 'Disponible', tone: 'accent' as const, text: 'Découpage en pièces séparées et sélection de régions par angle, directement dans le visualiseur.' },
+  const status = useAsync(() => api.mesh.spaceStatus())
+  const extra = [
+    { name: 'Segmentation géométrique', where: 'Local (tous les PC)', license: 'MIT (AI Studio)', status: 'Disponible', tone: 'accent' as const, text: 'Découpage en pièces séparées et sélection de régions par angle, directement dans le visualiseur.' },
+    { name: 'TripoSR / TripoSG en local', where: 'Local (NVIDIA 6 Go+)', license: 'MIT', status: local3D ? 'En préparation' : 'Incompatible avec ce PC', tone: 'warn' as const, text: 'Exigent la compilation de dépendances CUDA sous Windows : pas encore intégrés en local.' },
     { name: 'Hunyuan3D 2.x / P3-SAM', where: '—', license: 'Tencent (exclut l’UE)', status: 'Non proposé', tone: 'danger' as const, text: 'Licence non valable en France et dans l’Union européenne.' }
   ]
   return (
-    <Card>
-      <ul className="divide-y divide-line">
-        {rows.map((r) => (
-          <li key={r.name} className="flex items-start gap-4 px-5 py-4">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[14px] font-semibold">{r.name}</span>
-                <Badge tone={r.where.startsWith('Cloud') ? 'cloud' : 'local'}>{r.where.startsWith('Cloud') ? 'Cloud' : 'Local'}</Badge>
+    <div className="space-y-3">
+      <Card className="px-5 py-4 text-[13px] text-fg-muted">
+        Les moteurs 3D tournent gratuitement sur les GPU de Hugging Face, <span className="text-fg">sans clé ni compte</span>. Le quota GPU gratuit est commun à tous les moteurs : ~2 min par jour sans compte, 5 min avec un compte Hugging Face gratuit.
+      </Card>
+      <Card>
+        <ul className="divide-y divide-line">
+          {MESH_ENGINES.map((e) => {
+            const st = status.data?.find((x) => x.engine === e.id)
+            return (
+              <li key={e.id} className="flex items-start gap-4 px-5 py-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[14px] font-semibold">{e.label}</span>
+                    <span className="text-[12px] text-fg-subtle">{e.publisher}</span>
+                    <Badge tone="cloud">Cloud gratuit</Badge>
+                    <Badge tone="neutral">{e.output === 'parts' ? 'En parties' : e.output === 'textured' ? 'Texturé' : 'Géométrie (+ texture)'}</Badge>
+                  </div>
+                  <p className="mt-1 text-[13px] text-fg-muted">{e.description}</p>
+                  <p className="mt-1 text-[11.5px] text-fg-subtle">
+                    Space {e.space} · Licence {e.license} · {e.gpuSeconds} de GPU par génération
+                  </p>
+                </div>
+                <Badge tone={st === undefined ? 'neutral' : st.available ? 'accent' : 'danger'}>
+                  {st === undefined ? 'Vérification…' : st.available ? (st.stage === 'SLEEPING' ? 'En veille' : 'Disponible') : 'Indisponible'}
+                </Badge>
+              </li>
+            )
+          })}
+          {extra.map((r) => (
+            <li key={r.name} className="flex items-start gap-4 px-5 py-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[14px] font-semibold">{r.name}</span>
+                  <Badge tone="local">Local</Badge>
+                </div>
+                <p className="mt-1 text-[13px] text-fg-muted">{r.text}</p>
+                <p className="mt-1 text-[11.5px] text-fg-subtle">
+                  {r.where} · Licence : {r.license}
+                </p>
               </div>
-              <p className="mt-1 text-[13px] text-fg-muted">{r.text}</p>
-              <p className="mt-1 text-[11.5px] text-fg-subtle">
-                {r.where} · Licence : {r.license}
-              </p>
-            </div>
-            <Badge tone={r.tone}>{r.status}</Badge>
-          </li>
-        ))}
-      </ul>
-    </Card>
+              <Badge tone={r.tone}>{r.status}</Badge>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
   )
 }
 

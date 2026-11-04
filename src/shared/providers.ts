@@ -22,6 +22,8 @@ export interface CloudProvider {
   freeFilter: 'all' | 'openrouter-free' | 'allowlist'
   allowlist?: string[]
   extraHeaders?: Record<string, string>
+  /** Valeur envoyée comme clé quand le fournisseur accepte l'accès anonyme mais attend un en-tête Authorization. */
+  anonymousKey?: string
   knownLimits: string
   asOf: string
   hosting: string
@@ -37,6 +39,21 @@ export const CLOUD_PROVIDERS: CloudProvider[] = [
     knownLimits: 'Sans clé : 2 requêtes/min par modèle. Avec clé : 400 requêtes/min.', asOf: '2026-11-03',
     hosting: 'France (UE)', trainsOnFreeData: 'non',
     notes: 'Fonctionne immédiatement, sans compte ni clé.'
+  },
+  {
+    id: 'kilo', label: 'Kilo Gateway (modèles :free)', badge: 'free-nokey',
+    baseUrl: 'https://ai-gateway.kilo.ai/api/v1', keyRequired: false,
+    signupUrl: 'https://kilo.ai/', freeFilter: 'openrouter-free',
+    knownLimits: 'Sans clé : 200 requêtes/heure par adresse IP, modèles gratuits (suffixe :free) uniquement.', asOf: '2026-11-04',
+    hosting: 'Variable selon le modèle', trainsOnFreeData: 'possible',
+    notes: 'Fonctionne immédiatement, sans compte ni clé. Les modèles gratuits changent souvent.'
+  },
+  {
+    id: 'llm7', label: 'LLM7.io', badge: 'free-nokey',
+    baseUrl: 'https://api.llm7.io/v1', keyRequired: false, anonymousKey: 'unused',
+    signupUrl: 'https://token.llm7.io/', freeFilter: 'all',
+    knownLimits: 'Sans clé : ~30 requêtes/min ; davantage avec un jeton gratuit (adresse e-mail).', asOf: '2026-11-04',
+    hosting: 'Inconnu', trainsOnFreeData: 'inconnu', notes: 'Service communautaire, sans garantie de disponibilité.'
   },
   {
     id: 'gemini', label: 'Google Gemini (AI Studio)', badge: 'free',
@@ -121,12 +138,6 @@ export const CLOUD_PROVIDERS: CloudProvider[] = [
     baseUrl: 'https://api-inference.modelscope.cn/v1', keyRequired: true,
     signupUrl: 'https://modelscope.cn/my/myaccesstoken', freeFilter: 'all',
     knownLimits: 'Quota quotidien gratuit (compte Alibaba Cloud requis).', asOf: '2026-11-03', hosting: 'Chine', trainsOnFreeData: 'inconnu'
-  },
-  {
-    id: 'llm7', label: 'LLM7.io', badge: 'free-nokey',
-    baseUrl: 'https://api.llm7.io/v1', keyRequired: false,
-    signupUrl: 'https://token.llm7.io/', freeFilter: 'all',
-    knownLimits: 'Faible et non garanti (service communautaire).', asOf: '2026-11-03', hosting: 'Inconnu', trainsOnFreeData: 'inconnu'
   },
   {
     id: 'cohere', label: 'Cohere (clé d’essai)', badge: 'free',

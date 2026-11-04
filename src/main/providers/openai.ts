@@ -30,7 +30,7 @@ export class OpenAICompatProvider implements LlmProvider {
     return {
       'Content-Type': 'application/json',
       'User-Agent': USER_AGENT,
-      ...(this.key ? { Authorization: `Bearer ${this.key}` } : {}),
+      ...(this.key ? { Authorization: `Bearer ${this.key}` } : this.cfg.anonymousKey ? { Authorization: `Bearer ${this.cfg.anonymousKey}` } : {}),
       ...this.cfg.extraHeaders
     }
   }

@@ -109,16 +109,24 @@ export interface ImageJob {
 }
 
 export interface Mesh3DJob {
+  engine: 'trellis' | 'trellis2' | 'partcrafter' | 'triposg' | 'step1x'
   imagePath: string
   seed: number
-  ssSteps: number
-  slatSteps: number
-  ssGuidance: number
-  slatGuidance: number
-  meshSimplify: number
+  quality: 'fast' | 'balanced' | 'high'
+  textured: boolean
+  numParts: number
   textureSize: number
   projectId?: string | null
   prompt?: string
+}
+
+export interface SpaceStatus {
+  engine: string
+  space: string
+  available: boolean
+  stage?: string
+  hardware?: string
+  error?: string
 }
 
 export interface AiStudioApi {
@@ -211,7 +219,7 @@ export interface AiStudioApi {
     pickInput(): Promise<string | null>
   }
   mesh: {
-    spaceStatus(): Promise<{ space: string; available: boolean; stage?: string; error?: string }>
+    spaceStatus(): Promise<SpaceStatus[]>
     generate(job: Mesh3DJob): Promise<Result<GenerationRecord>>
     list(): Promise<GenerationRecord[]>
     import(): Promise<Result<GenerationRecord> | null>

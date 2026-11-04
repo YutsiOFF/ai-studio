@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { CircleAlert, CircleCheck, Download, Loader2, X } from 'lucide-react'
 import type { TaskEvent } from '@shared/ipc'
+import { useLocation } from 'react-router-dom'
 import { api } from '../lib/hooks'
 import { formatBytes, formatEta, useTaskStore } from '../lib/tasks'
 import { Meter, cn } from './ui'
@@ -39,18 +40,28 @@ export function TaskProgress({ task, compact }: { task: TaskEvent; compact?: boo
 }
 
 /** Panneau flottant des tâches en cours (téléchargements, installations, générations). */
+/** Tâches déjà affichées en direct sur la page courante : pas de doublon dans le panneau flottant. */
+const SHOWN_INLINE: Record<string, TaskEvent['kind'][]> = {
+  '/images': ['image', 'model', 'engine'],
+  '/3d': ['mesh3d', 'image'],
+  '/library': ['model', 'engine'],
+  '/local-models': ['model', 'engine']
+}
+
 export function TaskDock() {
-  const tasks = Object.values(useTaskStore((s) => s.tasks))
+  const { pathname } = useLocation()
+  const hidden = SHOWN_INLINE[pathname] ?? []
+  const tasks = Object.values(useTaskStore((s) => s.tasks)).filter((t) => !hidden.includes(t.kind))
   return (
-    <div className="pointer-events-none fixed bottom-5 left-[284px] z-40 flex w-[340px] flex-col gap-2">
+    <div className="pointer-events-none fixed top-[52px] right-4 z-40 flex w-[320px] flex-col gap-2">
       <AnimatePresence initial={false}>
         {tasks.map((t) => (
           <motion.div
             key={t.id}
             layout
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 24 }}
             transition={{ duration: 0.22 }}
             className="pointer-events-auto rounded-xl border border-line-strong bg-surface-2/95 px-3.5 py-3 shadow-2xl shadow-black/40 backdrop-blur"
           >
