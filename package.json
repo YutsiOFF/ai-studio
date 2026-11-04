@@ -1,6 +1,6 @@
 {
   "name": "ai-studio",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Plateforme tout-en-un d'IA gratuites, locales et Cloud.",
   "main": "./out/main/index.js",
   "scripts": {
