@@ -71,6 +71,8 @@ export interface Settings {
   launchAtStartup: boolean
   notifications: boolean
   autoCheckUpdates: boolean
+  /** Moteurs dont la licence exclut certains territoires (ex. UE), activés en connaissance de cause. */
+  allowRestrictedLicenses: boolean
 }
 
 export interface Project {

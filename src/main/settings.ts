@@ -5,7 +5,8 @@ import type { Db } from './db'
 export const settingsSchema = z.object({
   launchAtStartup: z.boolean(),
   notifications: z.boolean(),
-  autoCheckUpdates: z.boolean()
+  autoCheckUpdates: z.boolean(),
+  allowRestrictedLicenses: z.boolean()
 })
 
 export const settingsPatchSchema = settingsSchema.partial().strict()
@@ -13,7 +14,8 @@ export const settingsPatchSchema = settingsSchema.partial().strict()
 export const DEFAULT_SETTINGS: Settings = {
   launchAtStartup: false,
   notifications: true,
-  autoCheckUpdates: true
+  autoCheckUpdates: true,
+  allowRestrictedLicenses: false
 }
 
 const KEY = 'app.settings'

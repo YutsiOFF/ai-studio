@@ -109,7 +109,7 @@ export interface ImageJob {
 }
 
 export interface Mesh3DJob {
-  engine: 'trellis' | 'trellis2' | 'partcrafter' | 'triposg' | 'step1x'
+  engine: 'trellis' | 'trellis2' | 'partcrafter' | 'triposg' | 'step1x' | 'hunyuan21' | 'instantmesh' | 'hi3dgen'
   imagePath: string
   seed: number
   quality: 'fast' | 'balanced' | 'high'

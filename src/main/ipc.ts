@@ -253,7 +253,7 @@ export function registerIpc(s: Services): void {
     wrap(() => {
       const j = z
         .object({
-          engine: z.enum(['trellis', 'trellis2', 'partcrafter', 'triposg', 'step1x']),
+          engine: z.enum(['trellis', 'trellis2', 'partcrafter', 'triposg', 'step1x', 'hunyuan21', 'instantmesh', 'hi3dgen']),
           imagePath: str,
           seed: z.number().int().min(0).max(2 ** 31),
           quality: z.enum(['fast', 'balanced', 'high']),
@@ -265,7 +265,7 @@ export function registerIpc(s: Services): void {
         })
         .parse(job)
       if (!isInside(dataPath, j.imagePath)) throw new Error('Image invalide.')
-      return generateCloud3D(db, s.outputDir, { ...j, hfToken: s.cloud.hfToken() })
+      return generateCloud3D(db, s.outputDir, { ...j, hfToken: s.cloud.hfToken() }, readSettings(db).allowRestrictedLicenses)
     })
   )
   h('mesh:list', () => listGenerations(db, 'mesh3d'))

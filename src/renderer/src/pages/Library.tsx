@@ -385,7 +385,6 @@ function ThreeDLibrary({ local3D }: { local3D: boolean }) {
   const extra = [
     { name: 'Segmentation géométrique', where: 'Local (tous les PC)', license: 'MIT (AI Studio)', status: 'Disponible', tone: 'accent' as const, text: 'Découpage en pièces séparées et sélection de régions par angle, directement dans le visualiseur.' },
     { name: 'TripoSR / TripoSG en local', where: 'Local (NVIDIA 6 Go+)', license: 'MIT', status: local3D ? 'En préparation' : 'Incompatible avec ce PC', tone: 'warn' as const, text: 'Exigent la compilation de dépendances CUDA sous Windows : pas encore intégrés en local.' },
-    { name: 'Hunyuan3D 2.x / P3-SAM', where: '—', license: 'Tencent (exclut l’UE)', status: 'Non proposé', tone: 'danger' as const, text: 'Licence non valable en France et dans l’Union européenne.' }
   ]
   return (
     <div className="space-y-3">
@@ -403,7 +402,8 @@ function ThreeDLibrary({ local3D }: { local3D: boolean }) {
                     <span className="text-[14px] font-semibold">{e.label}</span>
                     <span className="text-[12px] text-fg-subtle">{e.publisher}</span>
                     <Badge tone="cloud">Cloud gratuit</Badge>
-                    <Badge tone="neutral">{e.output === 'parts' ? 'En parties' : e.output === 'textured' ? 'Texturé' : 'Géométrie (+ texture)'}</Badge>
+                    <Badge tone="neutral">{e.output === 'parts' ? 'En parties' : e.output === 'textured' ? 'Texturé' : e.options.texture ? 'Géométrie (+ texture)' : 'Géométrie'}</Badge>
+                    {e.restricted && <Badge tone="warn">Licence excluant l’UE</Badge>}
                   </div>
                   <p className="mt-1 text-[13px] text-fg-muted">{e.description}</p>
                   <p className="mt-1 text-[11.5px] text-fg-subtle">

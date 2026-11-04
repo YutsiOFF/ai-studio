@@ -60,7 +60,7 @@ export interface Catalog {
 }
 
 export const EMBEDDED_CATALOG: Catalog = {
-  version: 2,
+  version: 3,
   updatedAt: '2026-11-04',
   llm: [
     {
@@ -236,6 +236,30 @@ export const EMBEDDED_CATALOG: Catalog = {
       description: 'Raisonnement pas à pas plus poussé que la version 8B.',
       license: 'MIT', commercial: true, paramsB: 14.8, activeParamsB: 14.8, sizeMB: 9000, contextK: 128,
       capabilities: ['thinking'], quality: { chat: 7.5, code: 7 }
+    },
+    {
+      id: 'deepseek-r1:1.5b', name: 'DeepSeek-R1 1.5B', publisher: 'DeepSeek',
+      description: 'Le plus petit modèle de raisonnement DeepSeek, utilisable sur processeur.',
+      license: 'MIT', commercial: true, paramsB: 1.8, activeParamsB: 1.8, sizeMB: 1100, contextK: 128,
+      capabilities: ['thinking'], quality: { chat: 3.5, code: 3 }
+    },
+    {
+      id: 'deepseek-r1:7b', name: 'DeepSeek-R1 7B', publisher: 'DeepSeek',
+      description: 'Raisonnement pas à pas, base Qwen 7B.',
+      license: 'MIT', commercial: true, paramsB: 7.6, activeParamsB: 7.6, sizeMB: 4700, contextK: 128,
+      capabilities: ['thinking'], quality: { chat: 6, code: 5.5 }
+    },
+    {
+      id: 'deepseek-r1:32b', name: 'DeepSeek-R1 32B', publisher: 'DeepSeek',
+      description: 'Raisonnement de haut niveau, pour 24 Go de mémoire vidéo.',
+      license: 'MIT', commercial: true, paramsB: 32.8, activeParamsB: 32.8, sizeMB: 20000, contextK: 128,
+      capabilities: ['thinking'], quality: { chat: 8.5, code: 8 }
+    },
+    {
+      id: 'deepseek-coder-v2:16b', name: 'DeepSeek-Coder V2 Lite 16B', publisher: 'DeepSeek',
+      description: 'Spécialiste du code (MoE : 2,4 milliards de paramètres actifs), rapide en mode hybride.',
+      license: 'DeepSeek License (usage commercial autorisé)', commercial: true, paramsB: 15.7, activeParamsB: 2.4, sizeMB: 8900, contextK: 160,
+      capabilities: [], quality: { code: 7.5, chat: 5.5 }
     },
     {
       id: 'qwen2.5vl:7b', name: 'Qwen2.5-VL 7B', publisher: 'Alibaba Qwen',

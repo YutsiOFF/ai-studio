@@ -92,6 +92,9 @@ function GeneralTab() {
           <Row title="Notifications" description="Notifications Windows (mise à jour prête, et plus tard fin de génération).">
             <Toggle label="Notifications" checked={settings.notifications} onChange={(v) => update({ notifications: v })} />
           </Row>
+          <Row title="Moteurs à licence restreinte" description="Hunyuan3D-2.1 (Tencent) : licence excluant l’Union européenne, le Royaume-Uni et la Corée du Sud. Désactivé par défaut.">
+            <Toggle label="Licences restreintes" checked={settings.allowRestrictedLicenses} onChange={(v) => update({ allowRestrictedLicenses: v })} />
+          </Row>
         </div>
       </Card>
       <Card>

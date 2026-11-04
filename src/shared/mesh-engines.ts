@@ -18,6 +18,8 @@ export interface MeshEngineInfo {
   options: { texture?: boolean; parts?: boolean; textureSize?: boolean }
   /** Durée GPU indicative par génération (secondes), d'après le Space. */
   gpuSeconds: string
+  /** Restriction de licence : le moteur reste désactivé tant que l'utilisateur ne l'a pas accepté. */
+  restricted?: string
 }
 
 export const MESH_ENGINES: MeshEngineInfo[] = [
@@ -75,5 +77,40 @@ export const MESH_ENGINES: MeshEngineInfo[] = [
     output: 'geometry',
     options: { texture: true },
     gpuSeconds: '120–300 s'
+  },
+  {
+    id: 'hunyuan21',
+    label: 'Hunyuan3D-2.1',
+    publisher: 'Tencent',
+    space: 'tencent/Hunyuan3D-2.1',
+    license: 'Tencent Hunyuan 3D 2.1 Community License',
+    description: 'Très haute qualité, textures PBR. Texture en option.',
+    output: 'geometry',
+    options: { texture: true },
+    gpuSeconds: '60–180 s',
+    restricted:
+      'La licence de Hunyuan3D-2.1 exclut explicitement l’Union européenne, le Royaume-Uni et la Corée du Sud : son utilisation depuis ces territoires n’est pas autorisée par Tencent. En l’activant, tu confirmes en assumer la responsabilité (ceci n’est pas un avis juridique).'
+  },
+  {
+    id: 'instantmesh',
+    label: 'InstantMesh',
+    publisher: 'Tencent ARC',
+    space: 'TencentARC/InstantMesh',
+    license: 'Apache 2.0',
+    description: 'Reconstruction à partir de 6 vues générées : rapide, couleurs par sommet.',
+    output: 'textured',
+    options: {},
+    gpuSeconds: '40–90 s'
+  },
+  {
+    id: 'hi3dgen',
+    label: 'Hi3DGen',
+    publisher: 'Stable-X',
+    space: 'Stable-X/Hi3DGen',
+    license: 'Non indiquée sur le Space (basé sur TRELLIS, MIT)',
+    description: 'Géométrie très détaillée grâce aux cartes de normales (sans texture).',
+    output: 'geometry',
+    options: {},
+    gpuSeconds: '60–120 s'
   }
 ]

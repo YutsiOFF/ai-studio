@@ -158,6 +158,29 @@ const RUNNERS: Record<string, (c: RunCtx) => Promise<{ glb: GradioFile; preview?
     return { glb: tex[0] as GradioFile }
   },
 
+  async hunyuan21({ client, image, handle, job, update, signal }) {
+    const data = [handle(image), null, null, null, null, Q(job.quality, 10, 30, 50), 5.0, job.seed, Q(job.quality, 196, 256, 384), true, 8000, false]
+    if (job.textured) {
+      const out = await call(client, '/generation_all', data, update, 'Génération de la forme et de la texture', signal)
+      return { glb: (out[1] ?? out[0]) as GradioFile }
+    }
+    const out = await call(client, '/shape_generation', data, update, 'Génération de la forme', signal)
+    return { glb: out[0] as GradioFile }
+  },
+
+  async instantmesh({ client, image, handle, job, update, signal }) {
+    const pre = await call(client, '/preprocess', [handle(image), true], update, 'Suppression du fond', signal)
+    await call(client, '/generate_mvs', [pre[0], Q(job.quality, 30, 50, 75), job.seed], update, 'Génération des 6 vues', signal)
+    const out = await call(client, '/make3d', [], update, 'Reconstruction du maillage', signal)
+    return { glb: (out[1] ?? out[0]) as GradioFile }
+  },
+
+  async hi3dgen({ client, image, handle, job, update, signal }) {
+    const pre = await call(client, '/preprocess_image', [handle(image)], update, 'Suppression du fond et recadrage', signal)
+    const out = await call(client, '/generate_3d', [pre[0], job.seed, 3, Q(job.quality, 25, 50, 50), 3.0, Q(job.quality, 4, 6, 10)], update, 'Génération de la géométrie détaillée', signal)
+    return { glb: (out[2] ?? out[3]) as GradioFile }
+  },
+
   async step1x({ client, image, handle, job, update, signal }) {
     const geo = await call(client, '/generate_geometry', [handle(image), 7.5, Q(job.quality, 25, 50, 75), 400000, 'symmetry', 'sharp'], update, 'Génération de la géométrie', signal)
     if (!job.textured) return { glb: geo[0] as GradioFile }
@@ -166,10 +189,11 @@ const RUNNERS: Record<string, (c: RunCtx) => Promise<{ glb: GradioFile; preview?
   }
 }
 
-export async function generateCloud3D(db: Db, outputDir: string, job: Mesh3DJob): Promise<GenerationRecord> {
+export async function generateCloud3D(db: Db, outputDir: string, job: Mesh3DJob, allowRestricted = false): Promise<GenerationRecord> {
   const engine = MESH_ENGINES.find((e) => e.id === job.engine)
   const runner = RUNNERS[job.engine]
   if (!engine || !runner) throw new Error('Moteur 3D inconnu.')
+  if (engine.restricted && !allowRestricted) throw new Error(`${engine.label} est désactivé : sa licence doit d’abord être acceptée (page Génération 3D).`)
   const taskId = `mesh3d:${randomUUID()}`
   const label = `Génération 3D (${engine.label})`
   const ctrl = taskController(taskId)

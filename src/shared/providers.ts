@@ -56,6 +56,13 @@ export const CLOUD_PROVIDERS: CloudProvider[] = [
     hosting: 'Inconnu', trainsOnFreeData: 'inconnu', notes: 'Service communautaire, sans garantie de disponibilité.'
   },
   {
+    id: 'pollinations', label: 'Pollinations.ai', badge: 'free',
+    baseUrl: 'https://gen.pollinations.ai/v1', keyRequired: true,
+    signupUrl: 'https://enter.pollinations.ai/', freeFilter: 'all',
+    knownLimits: 'Clé gratuite (sans carte) ; quotas quotidiens gratuits. Modèles : DeepSeek V4 Flash, Kimi, GLM, Mistral, gpt-oss…', asOf: '2026-11-04',
+    hosting: 'Variable selon le modèle', trainsOnFreeData: 'inconnu', notes: 'Accès à DeepSeek V4 Flash gratuitement.'
+  },
+  {
     id: 'gemini', label: 'Google Gemini (AI Studio)', badge: 'free',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', keyRequired: true,
     signupUrl: 'https://aistudio.google.com/apikey', freeFilter: 'all',

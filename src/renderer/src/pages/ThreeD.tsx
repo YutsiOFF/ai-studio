@@ -68,7 +68,10 @@ export function ThreeDPage() {
   const [numParts, setNumParts] = useState(4)
   const [texSize, setTexSize] = useState(1024)
   const [forge, setForge] = useState<{ imageUrl: string; phase: ForgePhase; target: THREE.Object3D | null } | null>(null)
-  const engine = MESH_ENGINES.find((e) => e.id === engineId) ?? MESH_ENGINES[0]!
+  const settings = useAsync(() => api.settings.get())
+  const [licenseFor, setLicenseFor] = useState<(typeof MESH_ENGINES)[number] | null>(null)
+  const allowRestricted = settings.data?.allowRestrictedLicenses ?? false
+  const engine = MESH_ENGINES.find((e) => e.id === engineId && (!e.restricted || allowRestricted)) ?? MESH_ENGINES[0]!
   const [busy, setBusy] = useState(false)
   const [textBusy, setTextBusy] = useState(false)
   const space = useAsync(() => api.mesh.spaceStatus())
@@ -142,7 +145,7 @@ export function ThreeDPage() {
     })
     setCurrent(null)
     setForge({ imageUrl: api.app.mediaUrl(source), phase: 'analyzing', target: null })
-    const r = await api.mesh.generate({ engine: engineId, imagePath: source, seed, quality, textured, numParts, textureSize: texSize, prompt: textPrompt || undefined })
+    const r = await api.mesh.generate({ engine: engine.id as Mesh3DJob['engine'], imagePath: source, seed, quality, textured, numParts, textureSize: texSize, prompt: textPrompt || undefined })
     setBusy(false)
     if (!r.ok) {
       setForge(null)
@@ -232,11 +235,15 @@ export function ThreeDPage() {
             <div className="mt-2 space-y-1.5">
               {MESH_ENGINES.map((e) => {
                 const st = space.data?.find((x) => x.engine === e.id)
-                const on = e.id === engineId
+                const on = e.id === engine.id
                 return (
                   <button
                     key={e.id}
                     onClick={() => {
+                      if (e.restricted && !allowRestricted) {
+                        setLicenseFor(e)
+                        return
+                      }
                       setEngineId(e.id as Mesh3DJob['engine'])
                       try {
                         localStorage.setItem('aistudio.mesh-engine', e.id)
@@ -248,9 +255,10 @@ export function ThreeDPage() {
                   >
                     <div className="flex items-center gap-2">
                       <Cloud className={cn('size-3.5', on ? 'text-accent' : 'text-cloud')} />
-                      <span className="text-[13px] font-medium">{e.label}</span>
+                      <span className="text-[13px] font-medium whitespace-nowrap">{e.label}</span>
                       <span className="truncate text-[11px] text-fg-subtle">{e.publisher}</span>
                       <span className="flex-1" />
+                      {e.restricted && <Badge tone="warn">{allowRestricted ? 'Licence UE' : 'Verrouillé'}</Badge>}
                       <span
                         className={cn('size-2 shrink-0 rounded-full', st === undefined ? 'bg-fg-subtle' : st.available ? 'bg-accent' : 'bg-danger')}
                         title={st === undefined ? 'Vérification…' : st.available ? `Disponible${st.stage === 'SLEEPING' ? ' (en veille, démarrage ~1 min)' : ''}` : `Indisponible : ${st.error ?? st.stage}`}
@@ -583,6 +591,34 @@ export function ThreeDPage() {
         </Panel>
       </aside>
 
+      <Modal
+        open={!!licenseFor}
+        onOpenChange={(v) => !v && setLicenseFor(null)}
+        title={`Activer ${licenseFor?.label ?? ''} ?`}
+        description={licenseFor?.restricted}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setLicenseFor(null)}>
+              Annuler
+            </Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                await api.settings.update({ allowRestrictedLicenses: true })
+                await settings.reload()
+                if (licenseFor) setEngineId(licenseFor.id as Mesh3DJob['engine'])
+                setLicenseFor(null)
+              }}
+            >
+              J’ai compris, activer
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[12.5px] text-fg-muted">
+          Licence : {licenseFor?.license}. Tu pourras désactiver ces moteurs à tout moment dans Paramètres &gt; Général.
+        </p>
+      </Modal>
       <Modal open={!!zoomTex} onOpenChange={(v) => !v && setZoomTex(null)} title={zoomTex ? `${zoomTex.slot} · ${zoomTex.material}` : ''} description={zoomTex ? `${zoomTex.width} × ${zoomTex.height}` : undefined} footer={<Button onClick={() => setZoomTex(null)}>Fermer</Button>}>
         {zoomTex && <img src={zoomTex.url} className="w-full rounded-lg" alt="" />}
       </Modal>
