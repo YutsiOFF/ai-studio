@@ -107,8 +107,19 @@ function start(): void {
     mainWindow = null
   })
 
-  initUpdater({ channel: IPC.updatesEvent, window: () => mainWindow, notificationsEnabled: () => readSettings(db).notifications })
-  if (readSettings(db).autoCheckUpdates) setTimeout(() => void checkForUpdates(), 10_000)
+  initUpdater({
+    channel: IPC.updatesEvent,
+    window: () => mainWindow,
+    notificationsEnabled: () => readSettings(db).notifications,
+    onError: (message) => logActivity(db, 'app.update-error', `Échec de la mise à jour automatique : ${message.slice(0, 300)}`)
+  })
+  // Vérification au démarrage, puis toutes les 2 heures tant que l'application reste ouverte.
+  if (readSettings(db).autoCheckUpdates) {
+    setTimeout(() => void checkForUpdates(), 5_000)
+    setInterval(() => {
+      if (readSettings(db).autoCheckUpdates) void checkForUpdates()
+    }, 2 * 60 * 60 * 1000)
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()

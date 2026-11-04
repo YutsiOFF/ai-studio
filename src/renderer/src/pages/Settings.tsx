@@ -196,7 +196,7 @@ function describe(s: UpdateStatus | undefined): string {
     case 'available':
       return `Version ${s.version} disponible, téléchargement en cours…`
     case 'downloading':
-      return `Téléchargement de la mise à jour : ${s.percent} %`
+      return `Téléchargement de la mise à jour${s.version ? ` ${s.version}` : ''} : ${s.percent} %`
     case 'ready':
       return `Version ${s.version} prête. Elle sera installée au redémarrage.`
     case 'error':

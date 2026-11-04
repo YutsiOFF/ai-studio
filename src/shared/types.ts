@@ -108,7 +108,7 @@ export type UpdateStatus =
   | { state: 'checking' }
   | { state: 'none'; checkedAt: string }
   | { state: 'available'; version: string }
-  | { state: 'downloading'; percent: number }
+  | { state: 'downloading'; percent: number; version?: string }
   | { state: 'ready'; version: string }
   | { state: 'error'; message: string }
 

@@ -7,6 +7,7 @@ import { useAsync, api } from '../lib/hooks'
 import { cn } from './ui'
 import { TaskDock } from './Tasks'
 import { ErrorBoundary } from './ErrorBoundary'
+import { UpdateBanner } from './UpdateBanner'
 import { useTaskSync } from '../lib/tasks'
 
 const FULL_BLEED = ['/assistant', '/images', '/3d']
@@ -57,6 +58,7 @@ function Sidebar() {
         ))}
       </nav>
 
+      <UpdateBanner />
       <div className="border-t border-line px-5 py-4">
         <Tooltip.Root>
           <Tooltip.Trigger asChild>
