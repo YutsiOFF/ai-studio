@@ -5,7 +5,7 @@
 import { createHash } from 'node:crypto'
 import { execFile } from 'node:child_process'
 import { createReadStream, createWriteStream, existsSync, mkdirSync, renameSync, statSync, unlinkSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { dirname, join } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 
@@ -88,7 +88,10 @@ export function extractZip(archive: string, destDir: string): Promise<void> {
   mkdirSync(destDir, { recursive: true })
   return new Promise((resolve, reject) => {
     const [cmd, args] =
-      process.platform === 'win32' ? ['tar', ['-xf', archive, '-C', destDir]] : ['unzip', ['-o', '-q', archive, '-d', destDir]]
+      process.platform === 'win32'
+        ? // Chemin explicite : un « tar » GNU (Git, MSYS) placé avant dans le PATH ne comprend pas les chemins « C:\… ».
+          [join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe'), ['-xf', archive, '-C', destDir]]
+        : ['unzip', ['-o', '-q', archive, '-d', destDir]]
     execFile(cmd as string, args as string[], { windowsHide: true, maxBuffer: 16 * 1024 * 1024 }, (err, _o, stderr) => {
       if (err) reject(new Error(`Extraction impossible : ${stderr || err.message}`))
       else resolve()

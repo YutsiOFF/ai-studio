@@ -50,7 +50,8 @@ const zip = join(envDir, '_dl', 'src.zip')
 await download(spec.sourceZip, zip)
 const tmp = join(envDir, '_dl', 'src')
 mkdirSync(tmp, { recursive: true })
-sh(py, ['-c', 'import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])', zip, tmp])
+// Même méthode que l'application (tar.exe de Windows, chemin explicite).
+sh(join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'tar.exe'), ['-xf', zip, '-C', tmp])
 const top = readdirSync(tmp).find((d) => existsSync(join(tmp, d, spec.packageDir)))!
 const srcDir = join(envDir, 'src')
 rmSync(srcDir, { recursive: true, force: true })
