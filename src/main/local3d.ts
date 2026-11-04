@@ -130,18 +130,25 @@ if __name__ == "__main__":
 `
 
 const DEPS = [
+  // Versions verified to resolve together (uv pip compile, windows / py3.11, with torch==2.5.1).
+  // transformers 4.35 needs tokenizers 0.14.x and therefore huggingface-hub < 0.18.
   'numpy==1.26.4',
   'omegaconf==2.3.0',
   'einops==0.7.0',
   'transformers==4.35.0',
-  'huggingface-hub==0.25.2',
+  'tokenizers==0.14.1',
+  'huggingface-hub==0.17.3',
   'trimesh==4.0.5',
   'Pillow==10.4.0',
   'PyMCubes==0.1.6',
   'rembg==2.0.59',
   'onnxruntime==1.19.2',
+  'opencv-python-headless==4.11.0.86',
+  'scikit-image==0.26.0',
+  'pymatting==1.1.16',
   'scipy==1.13.1',
-  'networkx==3.3'
+  'networkx==3.3',
+  'imageio==2.37.0'
 ]
 
 export interface Local3DStatus {
@@ -280,7 +287,7 @@ export class Local3D {
       up(device === 'cuda' ? 'Installation de PyTorch CUDA (≈ 2,5 Go, quelques minutes)' : 'Installation de PyTorch pour processeur (≈ 200 Mo)')
       await this.run(uv, ['pip', 'install', '--python', this.python(), 'torch==2.5.1', '--index-url', torchIndex], (l) => up(`PyTorch : ${l.slice(0, 90)}`), ctrl.signal)
       up('Installation des dépendances')
-      await this.run(uv, ['pip', 'install', '--python', this.python(), ...DEPS], (l) => up(`Dépendances : ${l.slice(0, 90)}`), ctrl.signal)
+      await this.run(uv, ['pip', 'install', '--python', this.python(), 'torch==2.5.1', ...DEPS], (l) => up(`Dépendances : ${l.slice(0, 90)}`), ctrl.signal)
 
       // 4. Code de TripoSR (MIT) + correctif PyMCubes
       up('Téléchargement du code de TripoSR')
